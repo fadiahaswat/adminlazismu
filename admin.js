@@ -177,93 +177,105 @@ function calculateStatistics(data) {
 }
 
 function renderTable() {
-    rowsPerPage = parseInt(paginationRowsEl.value, 10);
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    paginatedData = filteredData.slice(start, end);
+            rowsPerPage = parseInt(paginationRowsEl.value, 10);
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            paginatedData = filteredData.slice(start, end);
 
-    tableBodyEl.innerHTML = '';
-    
-    if (filteredData.length === 0) {
-        noDataEl.classList.remove('hidden');
-        tableWrapperEl.classList.add('hidden');
-        return;
-    }
-    
-    noDataEl.classList.add('hidden');
-    tableWrapperEl.classList.remove('hidden');
+            tableBodyEl.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                noDataEl.classList.remove('hidden');
+                tableWrapperEl.classList.add('hidden');
+                return;
+            }
+            
+            noDataEl.classList.add('hidden');
+            tableWrapperEl.classList.remove('hidden');
 
-    paginatedData.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors group";
-        
-        const dateObj = new Date(row.Timestamp);
-        const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
-        const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            paginatedData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors group";
+                
+                const dateObj = new Date(row.Timestamp);
+                const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+                const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-        // Logic Tampilan Detail
-        let detailInfo = '';
-        let badgeTipe = 'bg-slate-100 text-slate-500';
-        
-        if (row.TipeDonatur === 'santri') {
-            badgeTipe = 'bg-orange-100 text-orange-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
-        } else if (row.TipeDonatur === 'alumni') {
-            badgeTipe = 'bg-blue-100 text-blue-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${row.DetailAlumni || '-'}</div>`;
-        } else {
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
+                // Logic Tampilan Detail Donatur
+                let detailInfo = '';
+                let badgeTipe = 'bg-slate-100 text-slate-500';
+                
+                if (row.TipeDonatur === 'santri') {
+                    badgeTipe = 'bg-orange-100 text-orange-600';
+                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
+                } else if (row.TipeDonatur === 'alumni') {
+                    badgeTipe = 'bg-blue-100 text-blue-600';
+                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${row.DetailAlumni || '-'}</div>`;
+                } else {
+                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
+                }
+
+                // Metode Badge Color
+                let methodColor = 'bg-slate-100 text-slate-500';
+                if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
+                if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
+                if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
+
+                // === [LOGIKA HIGHLIGHT KODE UNIK] ===
+                const nominalVal = parseFloat(row.Nominal) || 0;
+                let nominalHTML = formatter.format(nominalVal);
+
+                // Cek apakah ada kode unik (tidak habis dibagi 1000)
+                // Dan metodenya bukan Tunai (karena Tunai biasanya bulat)
+                if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
+                    // Regex untuk membungkus 3 digit terakhir dengan span warna
+                    nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
+                }
+                // =====================================
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="block font-bold text-slate-700">${dateStr}</span>
+                        <span class="text-xs text-slate-400">${timeStr}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-bold text-slate-800 block">${row.NamaDonatur || 'Hamba Allah'}</span>
+                        <span class="text-xs text-slate-400 block">${row.NoHP || '-'}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${row.TipeDonatur || 'Umum'}</span>
+                        <div class="text-xs font-semibold text-slate-600">${row.JenisDonasi}</div>
+                        ${detailInfo}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <span class="font-black text-slate-800">${nominalHTML}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <i class="fas fa-check-circle text-green-500 text-lg" title="Tercatat di Server"></i>
+                    </td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap">
+                        <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Edit">
+                                <i class="fas fa-pencil-alt text-xs"></i>
+                            </button>
+                            <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus">
+                                <i class="fas fa-trash-alt text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tableBodyEl.appendChild(tr);
+            });
+
+            // Update Pagination Info
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
+            paginationPrevBtn.disabled = currentPage === 1;
+            paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
         }
-
-        // Metode Badge
-        let methodColor = 'bg-slate-100 text-slate-500';
-        if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
-        if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
-        if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
-
-        tr.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">
-                <span class="block font-bold text-slate-700">${dateStr}</span>
-                <span class="text-xs text-slate-400">${timeStr}</span>
-            </td>
-            <td class="px-6 py-4">
-                <span class="font-bold text-slate-800 block">${row.NamaDonatur || 'Hamba Allah'}</span>
-                <span class="text-xs text-slate-400 block">${row.NoHP || '-'}</span>
-            </td>
-            <td class="px-6 py-4">
-                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${row.TipeDonatur || 'Umum'}</span>
-                <div class="text-xs font-semibold text-slate-600">${row.JenisDonasi}</div>
-                ${detailInfo}
-            </td>
-            <td class="px-6 py-4 text-right">
-                <span class="font-black text-slate-800">${formatter.format(row.Nominal)}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <i class="fas fa-check-circle text-green-500 text-lg" title="Tercatat di Server"></i>
-            </td>
-            <td class="px-6 py-4 text-right whitespace-nowrap">
-                <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Edit">
-                        <i class="fas fa-pencil-alt text-xs"></i>
-                    </button>
-                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus">
-                        <i class="fas fa-trash-alt text-xs"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        tableBodyEl.appendChild(tr);
-    });
-
-    // Update Pagination Info
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
-    paginationPrevBtn.disabled = currentPage === 1;
-    paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
-}
 
 // === FILTER & DATA PROCESSING ===
 
