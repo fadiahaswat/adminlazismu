@@ -2,14 +2,14 @@
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
 // === SIMPLE AUTHENTICATION ===
-const PIN = "1918"; // Hardcoded PIN (Tahun berdiri Mu'allimin)
+const PIN = "1918"; 
 
 function checkLogin() {
     const input = document.getElementById('admin-pin').value;
     if (input === PIN) {
         sessionStorage.setItem('lazismu_admin_auth', 'true');
         document.getElementById('login-overlay').classList.add('hidden');
-        fetchData(); // Load data after login
+        fetchData(); 
     } else {
         alert("PIN Salah!");
         document.getElementById('admin-pin').value = '';
@@ -21,7 +21,6 @@ function logout() {
     location.reload();
 }
 
-// Cek sesi saat load
 document.addEventListener('DOMContentLoaded', () => {
     if (sessionStorage.getItem('lazismu_admin_auth') === 'true') {
         document.getElementById('login-overlay').classList.add('hidden');
@@ -39,10 +38,13 @@ const tableBodyEl = document.getElementById('table-body');
 const refreshButton = document.getElementById('refresh-button');
 const refreshIcon = document.getElementById('refresh-icon');
 
-// Statistik Elements
+// Statistik Elements (6 Cards)
 const statTotalEl = document.getElementById('admin-stat-total');
 const statDonaturEl = document.getElementById('admin-stat-donatur');
 const statHariIniEl = document.getElementById('admin-stat-hari-ini');
+const statTertinggiEl = document.getElementById('admin-stat-tertinggi'); // NEW
+const statRataEl = document.getElementById('admin-stat-rata'); // NEW
+const statTipeEl = document.getElementById('admin-stat-tipe'); // NEW
 
 // Modal Elements
 const alertModal = document.getElementById('alert-modal');
@@ -50,7 +52,7 @@ const confirmModal = document.getElementById('confirm-modal');
 const editModal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-form');
 
-// Filter Elements
+// Filter & Pagination Elements
 const filterSearchEl = document.getElementById('filter-search');
 const filterDateFromEl = document.getElementById('filter-date-from');
 const filterDateToEl = document.getElementById('filter-date-to');
@@ -59,8 +61,6 @@ const filterMetodeEl = document.getElementById('filter-metode');
 const filterApplyBtn = document.getElementById('filter-apply-button');
 const filterResetBtn = document.getElementById('filter-reset-button');
 const exportCsvBtn = document.getElementById('export-csv-button');
-
-// Pagination Elements
 const paginationRowsEl = document.getElementById('pagination-rows');
 const paginationInfoEl = document.getElementById('pagination-info');
 const paginationPrevBtn = document.getElementById('pagination-prev');
@@ -124,11 +124,7 @@ document.getElementById('alert-modal-close').onclick = () => hideModal(alertModa
 document.getElementById('confirm-modal-cancel').onclick = () => hideModal(confirmModal);
 document.getElementById('edit-modal-close').onclick = () => hideModal(editModal);
 document.getElementById('edit-modal-cancel').onclick = () => hideModal(editModal);
-
-document.getElementById('confirm-modal-ok').onclick = () => {
-    if (confirmCallback) confirmCallback();
-    hideModal(confirmModal);
-};
+document.getElementById('confirm-modal-ok').onclick = () => { if (confirmCallback) confirmCallback(); hideModal(confirmModal); };
 
 // === CORE FUNCTIONS ===
 
@@ -142,13 +138,10 @@ async function fetchData() {
     try {
         const response = await fetch(GAS_API_URL);
         if (!response.ok) throw new Error("Gagal terhubung ke server");
-        
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
-        // Urutkan dari yang terbaru (berdasarkan row number descending)
         allDonationData = result.data.sort((a, b) => b.row - a.row);
-        
         populateFilterDropdowns(allDonationData);
         applyFilters();
 
@@ -162,135 +155,153 @@ async function fetchData() {
     }
 }
 
+// === [LOGIKA STATISTIK LENGKAP] ===
 function calculateStatistics(data) {
-    const total = data.reduce((acc, row) => acc + (parseFloat(row.Nominal) || 0), 0);
-    const count = data.length;
-    
+    let total = 0;
+    let count = data.length;
+    let maxVal = 0;
+    let todayTotal = 0;
     const todayStr = new Date().toDateString();
-    const todayTotal = data
-        .filter(row => new Date(row.Timestamp).toDateString() === todayStr)
-        .reduce((acc, row) => acc + (parseFloat(row.Nominal) || 0), 0);
+    
+    // Untuk mencari tipe terbanyak
+    const typeCounts = {};
 
+    data.forEach(row => {
+        const val = parseFloat(row.Nominal) || 0;
+        total += val;
+        if (val > maxVal) maxVal = val;
+        
+        // Cek Donasi Hari Ini
+        if (new Date(row.Timestamp).toDateString() === todayStr) {
+            todayTotal += val;
+        }
+
+        // Hitung Jenis Donasi
+        const type = row.JenisDonasi || 'Lainnya';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+
+    // Cari Tipe Terbanyak
+    let topType = '-';
+    let topCount = 0;
+    for (const [key, val] of Object.entries(typeCounts)) {
+        if (val > topCount) {
+            topCount = val;
+            topType = key;
+        }
+    }
+
+    const avgVal = count > 0 ? total / count : 0;
+
+    // Render ke HTML
     statTotalEl.textContent = formatter.format(total);
     statDonaturEl.textContent = count;
     statHariIniEl.textContent = formatter.format(todayTotal);
+    
+    // Render Stats Tambahan
+    statTertinggiEl.textContent = formatter.format(maxVal);
+    statRataEl.textContent = formatter.format(avgVal);
+    statTipeEl.textContent = topType;
 }
 
 function renderTable() {
-            rowsPerPage = parseInt(paginationRowsEl.value, 10);
-            const start = (currentPage - 1) * rowsPerPage;
-            const end = start + rowsPerPage;
-            paginatedData = filteredData.slice(start, end);
+    rowsPerPage = parseInt(paginationRowsEl.value, 10);
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    paginatedData = filteredData.slice(start, end);
 
-            tableBodyEl.innerHTML = '';
-            
-            if (filteredData.length === 0) {
-                noDataEl.classList.remove('hidden');
-                tableWrapperEl.classList.add('hidden');
-                return;
-            }
-            
-            noDataEl.classList.add('hidden');
-            tableWrapperEl.classList.remove('hidden');
+    tableBodyEl.innerHTML = '';
+    
+    if (filteredData.length === 0) {
+        noDataEl.classList.remove('hidden');
+        tableWrapperEl.classList.add('hidden');
+        return;
+    }
+    
+    noDataEl.classList.add('hidden');
+    tableWrapperEl.classList.remove('hidden');
 
-            paginatedData.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors group";
-                
-                const dateObj = new Date(row.Timestamp);
-                const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
-                const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    paginatedData.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors group";
+        
+        const dateObj = new Date(row.Timestamp);
+        const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+        const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-                // Logic Tampilan Detail Donatur
-                let detailInfo = '';
-                let badgeTipe = 'bg-slate-100 text-slate-500';
-                
-                if (row.TipeDonatur === 'santri') {
-                    badgeTipe = 'bg-orange-100 text-orange-600';
-                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
-                } else if (row.TipeDonatur === 'alumni') {
-                    badgeTipe = 'bg-blue-100 text-blue-600';
-                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${row.DetailAlumni || '-'}</div>`;
-                } else {
-                    detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
-                }
-
-                // Metode Badge Color
-                let methodColor = 'bg-slate-100 text-slate-500';
-                if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
-                if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
-                if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
-
-                // === [LOGIKA HIGHLIGHT KODE UNIK] ===
-                const nominalVal = parseFloat(row.Nominal) || 0;
-                let nominalHTML = formatter.format(nominalVal);
-
-                // Cek apakah ada kode unik (tidak habis dibagi 1000)
-                // Dan metodenya bukan Tunai (karena Tunai biasanya bulat)
-                if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
-                    // Regex untuk membungkus 3 digit terakhir dengan span warna
-                    nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
-                }
-                // =====================================
-
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="block font-bold text-slate-700">${dateStr}</span>
-                        <span class="text-xs text-slate-400">${timeStr}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="font-bold text-slate-800 block">${row.NamaDonatur || 'Hamba Allah'}</span>
-                        <span class="text-xs text-slate-400 block">${row.NoHP || '-'}</span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${row.TipeDonatur || 'Umum'}</span>
-                        <div class="text-xs font-semibold text-slate-600">${row.JenisDonasi}</div>
-                        ${detailInfo}
-                    </td>
-                    <td class="px-6 py-4 text-right">
-                        <span class="font-black text-slate-800">${nominalHTML}</span>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <i class="fas fa-check-circle text-green-500 text-lg" title="Tercatat di Server"></i>
-                    </td>
-                    <td class="px-6 py-4 text-right whitespace-nowrap">
-                        <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Edit">
-                                <i class="fas fa-pencil-alt text-xs"></i>
-                            </button>
-                            <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus">
-                                <i class="fas fa-trash-alt text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tableBodyEl.appendChild(tr);
-            });
-
-            // Update Pagination Info
-            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-            paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
-            paginationPrevBtn.disabled = currentPage === 1;
-            paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
+        let detailInfo = '';
+        let badgeTipe = 'bg-slate-100 text-slate-500';
+        
+        if (row.TipeDonatur === 'santri') {
+            badgeTipe = 'bg-orange-100 text-orange-600';
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
+        } else if (row.TipeDonatur === 'alumni') {
+            badgeTipe = 'bg-blue-100 text-blue-600';
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${row.DetailAlumni || '-'}</div>`;
+        } else {
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
         }
 
-// === FILTER & DATA PROCESSING ===
+        let methodColor = 'bg-slate-100 text-slate-500';
+        if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
+        if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
+        if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
+
+        // === [HIGHLIGHT KODE UNIK] ===
+        const nominalVal = parseFloat(row.Nominal) || 0;
+        let nominalHTML = formatter.format(nominalVal);
+        if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
+            nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
+        }
+
+        tr.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="block font-bold text-slate-700">${dateStr}</span>
+                <span class="text-xs text-slate-400">${timeStr}</span>
+            </td>
+            <td class="px-6 py-4">
+                <span class="font-bold text-slate-800 block">${row.NamaDonatur || 'Hamba Allah'}</span>
+                <span class="text-xs text-slate-400 block">${row.NoHP || '-'}</span>
+            </td>
+            <td class="px-6 py-4">
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${row.TipeDonatur || 'Umum'}</span>
+                <div class="text-xs font-semibold text-slate-600">${row.JenisDonasi}</div>
+                ${detailInfo}
+            </td>
+            <td class="px-6 py-4 text-right">
+                <span class="font-black text-slate-800">${nominalHTML}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+                <i class="fas fa-check-circle text-green-500 text-lg" title="Tercatat di Server"></i>
+            </td>
+            <td class="px-6 py-4 text-right whitespace-nowrap">
+                <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
+                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
+                </div>
+            </td>
+        `;
+        tableBodyEl.appendChild(tr);
+    });
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
+    paginationPrevBtn.disabled = currentPage === 1;
+    paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
+}
 
 function populateFilterDropdowns(data) {
     const jenisSet = new Set();
     const metodeSet = new Set();
-
     data.forEach(row => {
         if (row.JenisDonasi) jenisSet.add(row.JenisDonasi);
         if (row.MetodePembayaran) metodeSet.add(row.MetodePembayaran);
     });
-
     filterJenisEl.innerHTML = '<option value="">Semua Jenis</option>';
     filterMetodeEl.innerHTML = '<option value="">Semua Metode</option>';
-
     jenisSet.forEach(val => filterJenisEl.add(new Option(val, val)));
     metodeSet.forEach(val => filterMetodeEl.add(new Option(val, val)));
 }
@@ -299,7 +310,6 @@ function applyFilters() {
     const search = filterSearchEl.value.toLowerCase();
     const jenis = filterJenisEl.value;
     const metode = filterMetodeEl.value;
-    
     let from = filterDateFromEl.valueAsDate;
     let to = filterDateToEl.valueAsDate;
     if(from) from.setHours(0,0,0,0);
@@ -307,17 +317,14 @@ function applyFilters() {
 
     filteredData = allDonationData.filter(row => {
         const time = new Date(row.Timestamp);
-        
         if (from && time < from) return false;
         if (to && time > to) return false;
         if (jenis && row.JenisDonasi !== jenis) return false;
         if (metode && row.MetodePembayaran !== metode) return false;
-
         if (search) {
             const str = `${row.NamaDonatur} ${row.NISSantri} ${row.NoHP} ${row.Email} ${row.NamaSantri}`.toLowerCase();
             if (!str.includes(search)) return false;
         }
-
         return true;
     });
 
@@ -327,30 +334,17 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    filterSearchEl.value = '';
-    filterJenisEl.value = '';
-    filterMetodeEl.value = '';
-    filterDateFromEl.value = '';
-    filterDateToEl.value = '';
+    filterSearchEl.value = ''; filterJenisEl.value = ''; filterMetodeEl.value = '';
+    filterDateFromEl.value = ''; filterDateToEl.value = '';
     applyFilters();
 }
-
-// === EDIT & DELETE LOGIC ===
 
 function openEditModal(rowNumber) {
     const data = allDonationData.find(r => r.row === rowNumber);
     if (!data) return;
-
     document.getElementById('edit-row-number').value = data.row;
-    
-    // Map Data to Input
     const fields = ['JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'NoHP', 'Email', 'NoKTP', 'Alamat', 'TipeDonatur', 'DetailAlumni', 'NamaSantri', 'NISSantri', 'KelasSantri', 'PesanDoa'];
-    
-    fields.forEach(f => {
-        const el = document.getElementById(`edit-${f}`);
-        if(el) el.value = data[f] || '';
-    });
-
+    fields.forEach(f => { const el = document.getElementById(`edit-${f}`); if(el) el.value = data[f] || ''; });
     showModal(editModal);
 }
 
@@ -359,48 +353,28 @@ async function handleEditSubmit(e) {
     const btn = document.getElementById('edit-modal-save');
     const txt = document.getElementById('edit-save-text');
     const load = document.getElementById('edit-save-loading');
-
-    btn.disabled = true;
-    txt.classList.add('hidden');
-    load.classList.remove('hidden');
+    btn.disabled = true; txt.classList.add('hidden'); load.classList.remove('hidden');
 
     const rowNumber = document.getElementById('edit-row-number').value;
-    
-    // Build Payload
     const payload = {};
     const inputs = editForm.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
         const key = input.id.replace('edit-', '');
-        if (key && key !== 'row-number') {
-            payload[key] = input.value;
-        }
+        if (key && key !== 'row-number') payload[key] = input.value;
     });
 
     try {
-        // Gunakan endpoint yang sama dengan parameter action=update
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ 
-                action: "update", 
-                row: rowNumber, 
-                payload: payload 
-            })
+            body: JSON.stringify({ action: "update", row: rowNumber, payload: payload })
         });
-
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
-
-        hideModal(editModal);
-        showAppAlert("Data berhasil diperbarui!");
-        fetchData(); // Reload
-
+        hideModal(editModal); showAppAlert("Data berhasil diperbarui!"); fetchData();
     } catch (err) {
-        console.error(err);
-        showAppAlert("Gagal menyimpan data: " + err.message, true);
+        showAppAlert("Gagal menyimpan: " + err.message, true);
     } finally {
-        btn.disabled = false;
-        txt.classList.remove('hidden');
-        load.classList.add('hidden');
+        btn.disabled = false; txt.classList.remove('hidden'); load.classList.add('hidden');
     }
 }
 
@@ -410,13 +384,9 @@ async function executeDelete(rowNumber) {
             method: 'POST',
             body: JSON.stringify({ action: "delete", row: rowNumber })
         });
-        
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
-
-        showAppAlert("Data berhasil dihapus.");
-        fetchData();
-
+        showAppAlert("Data berhasil dihapus."); fetchData();
     } catch (err) {
         showAppAlert("Gagal menghapus: " + err.message, true);
     }
@@ -424,50 +394,31 @@ async function executeDelete(rowNumber) {
 
 function exportToCSV() {
     if (filteredData.length === 0) return showAppAlert("Tidak ada data untuk diekspor", true);
-
-    // Filter kolom yang relevan saja untuk ekspor
     const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa'];
-    
-    const csvRows = [];
-    csvRows.push(keys.join(',')); // Header
-
+    const csvRows = [keys.join(',')];
     filteredData.forEach(row => {
         const values = keys.map(key => {
-            let val = row[key] || '';
-            val = String(val).replace(/"/g, '""'); // Escape double quotes
-            return `"${val}"`;
+            let val = row[key] || ''; val = String(val).replace(/"/g, '""'); return `"${val}"`;
         });
         csvRows.push(values.join(','));
     });
-
-    const csvContent = csvRows.join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
+    const a = document.createElement('a'); a.setAttribute('hidden', ''); a.setAttribute('href', url);
     a.setAttribute('download', `rekap_donasi_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-// === EVENT LISTENERS ===
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
 filterResetBtn.addEventListener('click', resetFilters);
 exportCsvBtn.addEventListener('click', exportToCSV);
 editForm.addEventListener('submit', handleEditSubmit);
-
 paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
 paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
 paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
-
-// Delegate Click for Table Actions
 tableWrapperEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    
+    const btn = e.target.closest('button'); if (!btn) return;
     const row = parseInt(btn.dataset.row);
     if (btn.classList.contains('edit-btn')) openEditModal(row);
     if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
