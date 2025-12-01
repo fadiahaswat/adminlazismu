@@ -51,7 +51,7 @@ const editForm = document.getElementById('edit-form');
 
 // Filter & Paging Elements
 const filterSearchEl = document.getElementById('filter-search');
-const filterStatusEl = document.getElementById('filter-status'); // NEW
+const filterStatusEl = document.getElementById('filter-status'); 
 const filterDateFromEl = document.getElementById('filter-date-from');
 const filterDateToEl = document.getElementById('filter-date-to');
 const filterJenisEl = document.getElementById('filter-jenis');
@@ -471,6 +471,9 @@ async function handlePrintReceipt(rowNumber) {
     const m = String(dateObj.getMonth() + 1).padStart(2, '0');
     const y = String(dateObj.getFullYear());
 
+    const terbilangEl = document.getElementById('rcpt-terbilang-1');
+    const terbilang2El = document.getElementById('rcpt-terbilang-2');
+
     document.getElementById('rcpt-no').innerText = `KL-${data.row}`; // Contoh No Kuitansi
     document.getElementById('rcpt-d1').innerText = d[0]; document.getElementById('rcpt-d2').innerText = d[1];
     document.getElementById('rcpt-m1').innerText = m[0]; document.getElementById('rcpt-m2').innerText = m[1];
@@ -481,8 +484,9 @@ async function handlePrintReceipt(rowNumber) {
     document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
     document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
 
-    // Clear Previous Values
-    ['zakat','infaq','lain'].forEach(k => {
+    // Clear All Nominal Fields
+    const nominalFields = ['zakat', 'infaq', 'lain'];
+    nominalFields.forEach(k => {
         document.getElementById(`rcpt-jenis-${k}`).innerText = '';
         document.getElementById(`rcpt-nom-${k}`).innerText = '';
     });
@@ -491,10 +495,12 @@ async function handlePrintReceipt(rowNumber) {
     const fmtNominal = formatter.format(nominal);
     const jenis = (data.JenisDonasi || '').toLowerCase();
     
+    // Cek Nominal (Hanya Rp 1.000.249)
+    // Nominal dicetak sekali saja di kolom yang relevan.
     if(jenis.includes('zakat')) {
         document.getElementById('rcpt-jenis-zakat').innerText = data.JenisDonasi;
         document.getElementById('rcpt-nom-zakat').innerText = fmtNominal;
-    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh')) {
+    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) { // Menangkap 'Infaq/Shadaqah'ndidikan'
         document.getElementById('rcpt-jenis-infaq').innerText = data.JenisDonasi;
         document.getElementById('rcpt-nom-infaq').innerText = fmtNominal;
     } else {
@@ -502,19 +508,29 @@ async function handlePrintReceipt(rowNumber) {
         document.getElementById('rcpt-nom-lain').innerText = fmtNominal;
     }
     
+    // Nominal Total
     document.getElementById('rcpt-total').innerText = fmtNominal;
     
     // Checkbox Logic
     document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
     document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
     document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
-    
-    // Terbilang
-    // Pastikan terbilang-2 kosong, jika perlu
-    document.getElementById('rcpt-terbilang-2').innerText = ''; 
-    
+    document.getElementById('rcpt-chk-wesel').innerText = ''; // Clear Wesel
+
     // Set Terbilang
-    document.getElementById('rcpt-terbilang-1').innerText = terbilang(nominal) + " Rupiah";
+    const textTerbilang = terbilang(nominal) + " Rupiah";
+    terbilangEl.innerText = textTerbilang;
+    terbilang2El.innerText = ''; // Pastikan baris kedua kosong secara default
+    
+    // Penyesuaian Font Size jika Terlalu Panjang (Pencegahan Overflow)
+    // Jika lebih dari 50 karakter, kecilkan font
+    terbilangEl.style.fontSize = '14pt'; 
+    if (textTerbilang.length > 50) {
+        terbilangEl.style.fontSize = '12pt';
+    }
+    if (textTerbilang.length > 65) {
+        terbilangEl.style.fontSize = '10pt';
+    }
 
 
     // 2. GENERATE PDF & DOWNLOAD LOKAL
@@ -523,15 +539,15 @@ async function handlePrintReceipt(rowNumber) {
         margin: 0,
         filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true }, // useCORS penting untuk gambar eksternal
+        // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
+        html2canvas: { scale: 3, useCORS: true }, 
         jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
     };
 
     try {
-        // Menggunakan save() untuk mendownload langsung di browser
         await html2pdf().set(opt).from(element).save();
         
-        // Panggil server (Opsional, hanya untuk memastikan server merespons sukses jika diperlukan)
+        // Panggil server (Server hanya merespons success/error tanpa kirim email)
         await fetch(GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "sendReceipt" })
@@ -540,8 +556,10 @@ async function handlePrintReceipt(rowNumber) {
         showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh! Silakan cek folder Download Anda.`, false);
 
     } catch (err) {
-        // Jika gagal download, tampilkan pesan error
         showAppAlert("Gagal Generate PDF: " + err.message, true);
+    } finally {
+        // Reset font size setelah selesai
+        terbilangEl.style.fontSize = '14pt';
     }
 }
 
@@ -563,6 +581,6 @@ tableWrapperEl.addEventListener('click', (e) => {
     if (btn.classList.contains('verify-btn')) verifyDonation(row);
     if (btn.classList.contains('edit-btn')) openEditModal(row);
     if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
-    // NEW: Handle Print Button
+    // Handle Print Button
     if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
 });
