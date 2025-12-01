@@ -4,16 +4,83 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Lazismu Mu'allimin</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Kalam:wght@700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="admin.css">
     <script>
         tailwind.config = {
             theme: { extend: { fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] } } }
         }
     </script>
+
+    <style>
+        /* Container tersembunyi untuk generate PDF */
+        #hidden-receipt-container {
+            position: fixed;
+            left: -10000px; /* Lempar keluar layar tapi tetap ter-render */
+            top: 0;
+            z-index: -1;
+        }
+
+        /* Styling Kuitansi (Diambil dari file Anda) */
+        .receipt-page {
+            width: 210mm; height: 148mm; position: relative;
+            background-image: url('MasterTemplate.png'); /* Pastikan file ini ada */
+            background-size: 100% 100%; background-color: white;
+            font-family: 'Lato', sans-serif; font-size: 11pt; color: #000;
+        }
+        .receipt-editable {
+            position: absolute; line-height: 1.0; white-space: nowrap; overflow: hidden;
+            font-family: 'Kalam', cursive; font-weight: 700; font-size: 14pt; color: #000080;
+            display: flex; align-items: flex-end;
+            background: transparent; border: none;
+        }
+        /* Koordinat CSS */
+        .pos-nomor { top: 19.3mm; left: 70.4mm; width: 38.1mm; }
+        .tgl-d1 { top: 19.9mm; left: 164.5mm; width: 5.0mm; justify-content: center; }
+        .tgl-d2 { top: 19.9mm; left: 169.8mm; width: 4.8mm; justify-content: center; }
+        .tgl-m1 { top: 19.9mm; left: 176.4mm; width: 5.0mm; justify-content: center; }
+        .tgl-m2 { top: 19.9mm; left: 181.7mm; width: 4.8mm; justify-content: center; }
+        .tgl-y1 { top: 19.9mm; left: 188.8mm; width: 5.0mm; justify-content: center; }
+        .tgl-y2 { top: 19.9mm; left: 193.6mm; width: 5.0mm; justify-content: center; }
+        
+        .nama { top: 34.7mm; left: 89.7mm; width: 110.6mm; height: 8mm; }
+        .alamat { top: 40.5mm; left: 89.7mm; width: 110.6mm; height: 8mm; font-size: 12pt; }
+        .telepon-fax { top: 46.6mm; left: 89.7mm; width: 54.0mm; }
+        .no-hp { top: 46.6mm; left: 152.9mm; width: 47.1mm; }
+        
+        .jenis-zakat { top: 70.4mm; left: 68.0mm; width: 33.1mm; justify-content: flex-end; padding-right: 5px; }
+        .nominal-zakat { top: 70.4mm; left: 111.9mm; width: 64.0mm; }
+        .jenis-infaq { top: 76.5mm; left: 80.9mm; width: 20.1mm; justify-content: flex-end; padding-right: 5px; }
+        .nominal-infaq { top: 76.3mm; left: 111.9mm; width: 66.1mm; }
+        .jenis-lain { top: 82.1mm; left: 71.9mm; width: 29.1mm; justify-content: flex-end; padding-right: 5px; }
+        .nominal-lain { top: 82.1mm; left: 111.9mm; width: 66.1mm; }
+        .nominal-total { top: 89.2mm; left: 111.9mm; width: 66.1mm; }
+        
+        .chk { justify-content: center; font-family: 'Lato', sans-serif; font-weight: bold; font-size: 14pt; color: #000; }
+        .centang-kas { top: 70.4mm; left: 179.1mm; width: 5.0mm; }
+        .centang-bank { top: 76.3mm; left: 179.1mm; width: 5.0mm; }
+        .nama-bank { top: 75.7mm; left: 193.6mm; width: 9.3mm; font-size: 10pt; }
+        .centang-wesel { top: 82.3mm; left: 179.1mm; width: 5.0mm; }
+        
+        .terbilang-1 { top: 96.1mm; left: 89.7mm; width: 110.0mm; font-size: 12pt; }
+        .terbilang-2 { top: 102.2mm; left: 89.7mm; width: 110.0mm; font-size: 12pt; }
+        
+        .box-img { position: absolute; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; }
+        .stempel { top: 106.2mm; left: 62.4mm; width: 39.9mm; height: 34.9mm; }
+        .tempat-ttd { top: 106.2mm; left: 70.4mm; width: 61.4mm; height: 40.0mm; }
+        .stempel img, .tempat-ttd img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; opacity: 0.9; }
+        
+        .penerima { top: 128.9mm; left: 89.7mm; width: 39.7mm; justify-content: center; font-size: 12pt; }
+        .penyetor { top: 128.9mm; left: 149.7mm; width: 39.9mm; justify-content: center; font-size: 12pt; }
+    </style>
 </head>
 <body class="text-slate-600 bg-slate-50/50 font-sans">
 
@@ -196,7 +263,8 @@
                             <th class="px-6 py-4">Kategori</th>
                             <th class="px-6 py-4 text-right">Nominal</th>
                             <th class="px-6 py-4 text-center">Metode</th>
-                            <th class="px-6 py-4 text-center">Status</th> <th class="px-6 py-4 text-right">Aksi</th>
+                            <th class="px-6 py-4 text-center">Status</th> 
+                            <th class="px-6 py-4 text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-slate-100 text-sm text-slate-600 font-medium"></tbody>
@@ -215,66 +283,49 @@
         </div>
     </main>
 
-    <script src="admin.js"></script>
-    <div id="receipt-container" style="position: fixed; left: -9999px; top: 0;">
-    <div id="receipt-content" class="page-container">
-        <div id="rcpt-no" class="editable pos-nomor"></div>
+    <div id="hidden-receipt-container">
+        <div id="receipt-content" class="receipt-page">
+            <div id="rcpt-no" class="receipt-editable pos-nomor"></div>
 
-        <div id="rcpt-d1" class="editable tgl-box tgl-d1"></div>
-        <div id="rcpt-d2" class="editable tgl-box tgl-d2"></div>
-        <div id="rcpt-m1" class="editable tgl-box tgl-m1"></div>
-        <div id="rcpt-m2" class="editable tgl-box tgl-m2"></div>
-        <div id="rcpt-y1" class="editable tgl-box tgl-y1"></div>
-        <div id="rcpt-y2" class="editable tgl-box tgl-y2"></div>
+            <div id="rcpt-d1" class="receipt-editable tgl-d1"></div>
+            <div id="rcpt-d2" class="receipt-editable tgl-d2"></div>
+            <div id="rcpt-m1" class="receipt-editable tgl-m1"></div>
+            <div id="rcpt-m2" class="receipt-editable tgl-m2"></div>
+            <div id="rcpt-y1" class="receipt-editable tgl-y1"></div>
+            <div id="rcpt-y2" class="receipt-editable tgl-y2"></div>
 
-        <div id="rcpt-nama" class="editable nama"></div>
-        <div id="rcpt-alamat" class="editable alamat"></div>
-        <div id="rcpt-telp" class="editable telepon-fax"></div>
-        <div id="rcpt-hp" class="editable no-hp"></div>
+            <div id="rcpt-nama" class="receipt-editable nama"></div>
+            <div id="rcpt-alamat" class="receipt-editable alamat"></div>
+            <div id="rcpt-telp" class="receipt-editable telepon-fax"></div>
+            <div id="rcpt-hp" class="receipt-editable no-hp"></div>
 
-        <div id="rcpt-jenis-zakat" class="editable jenis-zakat"></div>
-        <div id="rcpt-nom-zakat" class="editable nominal-zakat"></div>
-        
-        <div id="rcpt-jenis-infaq" class="editable jenis-infaq"></div>
-        <div id="rcpt-nom-infaq" class="editable nominal-infaq"></div>
-        
-        <div id="rcpt-jenis-lain" class="editable jenis-lain"></div>
-        <div id="rcpt-nom-lain" class="editable nominal-lain"></div>
-        
-        <div id="rcpt-total" class="editable nominal-total"></div>
+            <div id="rcpt-jenis-zakat" class="receipt-editable jenis-zakat"></div>
+            <div id="rcpt-nom-zakat" class="receipt-editable nominal-zakat"></div>
+            
+            <div id="rcpt-jenis-infaq" class="receipt-editable jenis-infaq"></div>
+            <div id="rcpt-nom-infaq" class="receipt-editable nominal-infaq"></div>
+            
+            <div id="rcpt-jenis-lain" class="receipt-editable jenis-lain"></div>
+            <div id="rcpt-nom-lain" class="receipt-editable nominal-lain"></div>
+            
+            <div id="rcpt-total" class="receipt-editable nominal-total"></div>
 
-        <div id="rcpt-chk-kas" class="editable chk centang-kas"></div>
-        <div id="rcpt-chk-bank" class="editable chk centang-bank"></div>
-        <div id="rcpt-nama-bank" class="editable nama-bank"></div>
-        <div id="rcpt-chk-wesel" class="editable chk centang-wesel"></div>
+            <div id="rcpt-chk-kas" class="receipt-editable chk centang-kas"></div>
+            <div id="rcpt-chk-bank" class="receipt-editable chk centang-bank"></div>
+            <div id="rcpt-nama-bank" class="receipt-editable nama-bank"></div>
+            <div id="rcpt-chk-wesel" class="receipt-editable chk centang-wesel"></div>
 
-        <div id="rcpt-terbilang-1" class="editable terbilang-1"></div>
-        <div id="rcpt-terbilang-2" class="editable terbilang-2"></div>
+            <div id="rcpt-terbilang-1" class="receipt-editable terbilang-1"></div>
+            <div id="rcpt-terbilang-2" class="receipt-editable terbilang-2"></div>
 
-        <div class="box-img stempel"><img src="stempel.png" alt=""></div> <div class="box-img tempat-ttd"><img src="ttd.png" alt=""></div> <div class="editable penerima">Andi Aqillah</div>
-        <div id="rcpt-penyetor" class="editable penyetor"></div>
+            <div class="box-img stempel"><img src="stempel.png" alt="Stempel"></div>
+            <div class="box-img tempat-ttd"><img src="ttd.png" alt="TTD"></div>
+
+            <div class="receipt-editable penerima">Andi Aqillah</div>
+            <div id="rcpt-penyetor" class="receipt-editable penyetor"></div>
+        </div>
     </div>
-</div>
 
-<style>
-    /* Paste CSS dari file kuitansi Anda di sini, tapi tambahkan prefix #receipt-content */
-    #receipt-content {
-        width: 210mm; height: 148mm; position: relative;
-        background-image: url('MasterTemplate.png'); /* Pastikan URL benar */
-        background-size: 100% 100%; background-color: white;
-        font-family: 'Lato', sans-serif; font-size: 11pt; color: #000;
-    }
-    #receipt-content .editable {
-        position: absolute; line-height: 1.0; white-space: nowrap; overflow: hidden;
-        font-family: 'Kalam', cursive; font-weight: 700; font-size: 14pt; color: #000080;
-        display: flex; align-items: flex-end;
-    }
-    /* ... (Salin sisa CSS posisi koordinat dari file Anda ke sini) ... */
-    /* CONTOH KOORDINAT (Sesuaikan dengan file asli Anda): */
-    #receipt-content .pos-nomor { top: 19.3mm; left: 70.4mm; width: 38.1mm; }
-    #receipt-content .nama { top: 34.7mm; left: 89.7mm; width: 110.6mm; height: 8mm; }
-    /* Pastikan semua class CSS kuitansi Anda ada di sini */
-</style>
+    <script src="admin.js"></script>
 </body>
 </html>
-
