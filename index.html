@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Lazismu Mu'allimin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="admin.css">
@@ -215,5 +216,65 @@
     </main>
 
     <script src="admin.js"></script>
+    <div id="receipt-container" style="position: fixed; left: -9999px; top: 0;">
+    <div id="receipt-content" class="page-container">
+        <div id="rcpt-no" class="editable pos-nomor"></div>
+
+        <div id="rcpt-d1" class="editable tgl-box tgl-d1"></div>
+        <div id="rcpt-d2" class="editable tgl-box tgl-d2"></div>
+        <div id="rcpt-m1" class="editable tgl-box tgl-m1"></div>
+        <div id="rcpt-m2" class="editable tgl-box tgl-m2"></div>
+        <div id="rcpt-y1" class="editable tgl-box tgl-y1"></div>
+        <div id="rcpt-y2" class="editable tgl-box tgl-y2"></div>
+
+        <div id="rcpt-nama" class="editable nama"></div>
+        <div id="rcpt-alamat" class="editable alamat"></div>
+        <div id="rcpt-telp" class="editable telepon-fax"></div>
+        <div id="rcpt-hp" class="editable no-hp"></div>
+
+        <div id="rcpt-jenis-zakat" class="editable jenis-zakat"></div>
+        <div id="rcpt-nom-zakat" class="editable nominal-zakat"></div>
+        
+        <div id="rcpt-jenis-infaq" class="editable jenis-infaq"></div>
+        <div id="rcpt-nom-infaq" class="editable nominal-infaq"></div>
+        
+        <div id="rcpt-jenis-lain" class="editable jenis-lain"></div>
+        <div id="rcpt-nom-lain" class="editable nominal-lain"></div>
+        
+        <div id="rcpt-total" class="editable nominal-total"></div>
+
+        <div id="rcpt-chk-kas" class="editable chk centang-kas"></div>
+        <div id="rcpt-chk-bank" class="editable chk centang-bank"></div>
+        <div id="rcpt-nama-bank" class="editable nama-bank"></div>
+        <div id="rcpt-chk-wesel" class="editable chk centang-wesel"></div>
+
+        <div id="rcpt-terbilang-1" class="editable terbilang-1"></div>
+        <div id="rcpt-terbilang-2" class="editable terbilang-2"></div>
+
+        <div class="box-img stempel"><img src="stempel.png" alt=""></div> <div class="box-img tempat-ttd"><img src="ttd.png" alt=""></div> <div class="editable penerima">Andi Aqillah</div>
+        <div id="rcpt-penyetor" class="editable penyetor"></div>
+    </div>
+</div>
+
+<style>
+    /* Paste CSS dari file kuitansi Anda di sini, tapi tambahkan prefix #receipt-content */
+    #receipt-content {
+        width: 210mm; height: 148mm; position: relative;
+        background-image: url('MasterTemplate.png'); /* Pastikan URL benar */
+        background-size: 100% 100%; background-color: white;
+        font-family: 'Lato', sans-serif; font-size: 11pt; color: #000;
+    }
+    #receipt-content .editable {
+        position: absolute; line-height: 1.0; white-space: nowrap; overflow: hidden;
+        font-family: 'Kalam', cursive; font-weight: 700; font-size: 14pt; color: #000080;
+        display: flex; align-items: flex-end;
+    }
+    /* ... (Salin sisa CSS posisi koordinat dari file Anda ke sini) ... */
+    /* CONTOH KOORDINAT (Sesuaikan dengan file asli Anda): */
+    #receipt-content .pos-nomor { top: 19.3mm; left: 70.4mm; width: 38.1mm; }
+    #receipt-content .nama { top: 34.7mm; left: 89.7mm; width: 110.6mm; height: 8mm; }
+    /* Pastikan semua class CSS kuitansi Anda ada di sini */
+</style>
 </body>
 </html>
+
