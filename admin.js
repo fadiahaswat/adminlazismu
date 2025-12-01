@@ -1,15 +1,15 @@
-// URL API SAMA DENGAN WEBAPP UTAMA
+// URL API SAMA DENGAN WEBAPP UTAMA (Pastikan URL ini sudah benar dari deploy terbaru Code.gs)
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
-// === SIMPLE AUTHENTICATION ===
-const PIN = "1918"; 
+// === AUTHENTICATION ===
+const PIN = "1918";
 
 function checkLogin() {
     const input = document.getElementById('admin-pin').value;
     if (input === PIN) {
         sessionStorage.setItem('lazismu_admin_auth', 'true');
         document.getElementById('login-overlay').classList.add('hidden');
-        fetchData(); 
+        fetchData();
     } else {
         alert("PIN Salah!");
         document.getElementById('admin-pin').value = '';
@@ -28,23 +28,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// === UI VARIABLES ===
+// === VARIABLES ===
 const loadingEl = document.getElementById('admin-loading');
-const errorEl = document.getElementById('admin-error');
-const errorMessageEl = document.getElementById('admin-error-message');
-const noDataEl = document.getElementById('admin-no-data');
 const tableWrapperEl = document.getElementById('admin-table-wrapper');
 const tableBodyEl = document.getElementById('table-body');
 const refreshButton = document.getElementById('refresh-button');
 const refreshIcon = document.getElementById('refresh-icon');
 
-// Statistik Elements (6 Cards)
+// Statistik Elements
 const statTotalEl = document.getElementById('admin-stat-total');
 const statDonaturEl = document.getElementById('admin-stat-donatur');
 const statHariIniEl = document.getElementById('admin-stat-hari-ini');
-const statTertinggiEl = document.getElementById('admin-stat-tertinggi'); // NEW
-const statRataEl = document.getElementById('admin-stat-rata'); // NEW
-const statTipeEl = document.getElementById('admin-stat-tipe'); // NEW
+const statTertinggiEl = document.getElementById('admin-stat-tertinggi');
+const statRataEl = document.getElementById('admin-stat-rata');
+const statTipeEl = document.getElementById('admin-stat-tipe');
 
 // Modal Elements
 const alertModal = document.getElementById('alert-modal');
@@ -52,7 +49,7 @@ const confirmModal = document.getElementById('confirm-modal');
 const editModal = document.getElementById('edit-modal');
 const editForm = document.getElementById('edit-form');
 
-// Filter & Pagination Elements
+// Filter & Paging Elements
 const filterSearchEl = document.getElementById('filter-search');
 const filterDateFromEl = document.getElementById('filter-date-from');
 const filterDateToEl = document.getElementById('filter-date-to');
@@ -66,13 +63,12 @@ const paginationInfoEl = document.getElementById('pagination-info');
 const paginationPrevBtn = document.getElementById('pagination-prev');
 const paginationNextBtn = document.getElementById('pagination-next');
 
-// State Data
+// Data State
 let allDonationData = [];
 let filteredData = [];
-let paginatedData = [];
-let confirmCallback = null;
 let currentPage = 1;
 let rowsPerPage = 50;
+let confirmCallback = null;
 
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -126,18 +122,16 @@ document.getElementById('edit-modal-close').onclick = () => hideModal(editModal)
 document.getElementById('edit-modal-cancel').onclick = () => hideModal(editModal);
 document.getElementById('confirm-modal-ok').onclick = () => { if (confirmCallback) confirmCallback(); hideModal(confirmModal); };
 
+
 // === CORE FUNCTIONS ===
 
 async function fetchData() {
     loadingEl.classList.remove('hidden');
-    errorEl.classList.add('hidden');
-    noDataEl.classList.add('hidden');
     tableWrapperEl.classList.add('hidden');
     refreshIcon.classList.add('fa-spin');
 
     try {
         const response = await fetch(GAS_API_URL);
-        if (!response.ok) throw new Error("Gagal terhubung ke server");
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
@@ -147,15 +141,32 @@ async function fetchData() {
 
     } catch (error) {
         console.error(error);
-        errorMessageEl.textContent = error.message;
-        errorEl.classList.remove('hidden');
+        showAppAlert("Gagal memuat data: " + error.message, true);
     } finally {
         loadingEl.classList.add('hidden');
         refreshIcon.classList.remove('fa-spin');
     }
 }
 
-// === [LOGIKA STATISTIK LENGKAP] ===
+async function verifyDonation(rowNumber) {
+    // Tampilkan modal konfirmasi custom
+    showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
+        try {
+            const response = await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "verify", row: rowNumber })
+            });
+            const res = await response.json();
+            if(res.status !== 'success') throw new Error(res.message);
+            
+            showAppAlert("Donasi berhasil diverifikasi!");
+            fetchData(); // Reload data
+        } catch (error) {
+            showAppAlert("Gagal verifikasi: " + error.message, true);
+        }
+    });
+}
+
 function calculateStatistics(data) {
     let total = 0;
     let count = data.length;
@@ -163,7 +174,6 @@ function calculateStatistics(data) {
     let todayTotal = 0;
     const todayStr = new Date().toDateString();
     
-    // Untuk mencari tipe terbanyak
     const typeCounts = {};
 
     data.forEach(row => {
@@ -171,17 +181,14 @@ function calculateStatistics(data) {
         total += val;
         if (val > maxVal) maxVal = val;
         
-        // Cek Donasi Hari Ini
         if (new Date(row.Timestamp).toDateString() === todayStr) {
             todayTotal += val;
         }
 
-        // Hitung Jenis Donasi
         const type = row.JenisDonasi || 'Lainnya';
         typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
 
-    // Cari Tipe Terbanyak
     let topType = '-';
     let topCount = 0;
     for (const [key, val] of Object.entries(typeCounts)) {
@@ -193,12 +200,9 @@ function calculateStatistics(data) {
 
     const avgVal = count > 0 ? total / count : 0;
 
-    // Render ke HTML
     statTotalEl.textContent = formatter.format(total);
     statDonaturEl.textContent = count;
     statHariIniEl.textContent = formatter.format(todayTotal);
-    
-    // Render Stats Tambahan
     statTertinggiEl.textContent = formatter.format(maxVal);
     statRataEl.textContent = formatter.format(avgVal);
     statTipeEl.textContent = topType;
@@ -208,27 +212,27 @@ function renderTable() {
     rowsPerPage = parseInt(paginationRowsEl.value, 10);
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
-    paginatedData = filteredData.slice(start, end);
+    const paginatedData = filteredData.slice(start, end);
 
     tableBodyEl.innerHTML = '';
     
     if (filteredData.length === 0) {
-        noDataEl.classList.remove('hidden');
-        tableWrapperEl.classList.add('hidden');
+        tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">Tidak ada data ditemukan</td></tr>';
+        tableWrapperEl.classList.remove('hidden');
         return;
     }
     
-    noDataEl.classList.add('hidden');
     tableWrapperEl.classList.remove('hidden');
 
     paginatedData.forEach(row => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors group";
+        tr.className = "hover:bg-slate-50 transition-colors group border-b border-slate-100";
         
         const dateObj = new Date(row.Timestamp);
         const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
         const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
+        // Logic Detail Donatur
         let detailInfo = '';
         let badgeTipe = 'bg-slate-100 text-slate-500';
         
@@ -247,11 +251,23 @@ function renderTable() {
         if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
         if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
 
-        // === [HIGHLIGHT KODE UNIK] ===
+        // Highlight Kode Unik
         const nominalVal = parseFloat(row.Nominal) || 0;
         let nominalHTML = formatter.format(nominalVal);
         if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
             nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
+        }
+
+        // Logic Status & Tombol Verifikasi
+        const status = row.Status || "Belum Verifikasi";
+        let statusBadge = '';
+        let verifyBtnHTML = '';
+
+        if (status === 'Terverifikasi') {
+            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
+        } else {
+            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><i class="fas fa-clock"></i> Pending</span>`;
+            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${row.row}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
         }
 
         tr.innerHTML = `
@@ -269,17 +285,18 @@ function renderTable() {
                 ${detailInfo}
             </td>
             <td class="px-6 py-4 text-right">
-                <span class="font-black text-slate-800">${nominalHTML}</span>
+                <span class="font-black text-slate-800 text-sm">${nominalHTML}</span>
             </td>
             <td class="px-6 py-4 text-center">
                 <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
             </td>
             <td class="px-6 py-4 text-center">
-                <i class="fas fa-check-circle text-green-500 text-lg" title="Tercatat di Server"></i>
+                ${statusBadge}
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
-                <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
+                <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    ${verifyBtnHTML}
+                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${row.row}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
                     <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
                 </div>
             </td>
@@ -287,6 +304,7 @@ function renderTable() {
         tableBodyEl.appendChild(tr);
     });
 
+    // Update Pagination Info
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
     paginationPrevBtn.disabled = currentPage === 1;
@@ -394,7 +412,7 @@ async function executeDelete(rowNumber) {
 
 function exportToCSV() {
     if (filteredData.length === 0) return showAppAlert("Tidak ada data untuk diekspor", true);
-    const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa'];
+    const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa', 'Status'];
     const csvRows = [keys.join(',')];
     filteredData.forEach(row => {
         const values = keys.map(key => {
@@ -409,6 +427,7 @@ function exportToCSV() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+// Event Listeners
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
 filterResetBtn.addEventListener('click', resetFilters);
@@ -417,9 +436,12 @@ editForm.addEventListener('submit', handleEditSubmit);
 paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
 paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
 paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
+
+// Delegate Click Actions
 tableWrapperEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
     const row = parseInt(btn.dataset.row);
+    if (btn.classList.contains('verify-btn')) verifyDonation(row);
     if (btn.classList.contains('edit-btn')) openEditModal(row);
     if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
 });
