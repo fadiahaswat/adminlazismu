@@ -422,13 +422,14 @@ function terbilang(nilai) {
     return temp;
 }
 
+// admin.js: Ganti seluruh isi handlePrintReceipt dengan kode ini
 async function handlePrintReceipt(rowNumber) {
     const data = allDonationData.find(r => r.row === rowNumber);
     if (!data) return;
 
     showAppAlert("Sedang membuat PDF...", false);
     
-    // 1. ISI DATA KE TEMPLATE
+    // 1. ISI DATA KE TEMPLATE (Logic ini tetap sama)
     const dateObj = new Date(data.Timestamp);
     const nominal = parseFloat(data.Nominal) || 0;
     const d = String(dateObj.getDate()).padStart(2, '0');
@@ -445,13 +446,11 @@ async function handlePrintReceipt(rowNumber) {
     document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
     document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
 
-    // Clear Previous Values
     ['zakat','infaq','lain'].forEach(k => {
         document.getElementById(`rcpt-jenis-${k}`).innerText = '';
         document.getElementById(`rcpt-nom-${k}`).innerText = '';
     });
 
-    // Mapping Nominal
     const fmtNominal = formatter.format(nominal);
     const jenis = (data.JenisDonasi || '').toLowerCase();
     
@@ -468,60 +467,48 @@ async function handlePrintReceipt(rowNumber) {
     
     document.getElementById('rcpt-total').innerText = fmtNominal;
     
-    // Checkbox
     document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
     document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
     document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
     
-    // Terbilang
     document.getElementById('rcpt-terbilang-1').innerText = terbilang(nominal) + " Rupiah";
 
-    // 2. GENERATE PDF
+
+    // 2. GENERATE PDF & DOWNLOAD LOKAL (Tahap Bertahap)
     const element = document.getElementById('receipt-content');
     const opt = {
         margin: 0,
-        filename: `Kuitansi_${data.row}.pdf`,
+        filename: `Kuitansi_Lazismu_${data.row}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
     };
 
     try {
-        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-        const reader = new FileReader();
-        reader.readAsDataURL(pdfBlob); 
-        reader.onloadend = async function() {
-            const base64data = reader.result.split(',')[1];
-            await sendPdfToBackend(base64data, data);
-        }
+        // Menggunakan save() untuk mendownload langsung di browser
+        await html2pdf().set(opt).from(element).save();
+        
+        // Ganti alert sukses
+        showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh!`, false);
+
+        // Opsional: Jika Anda tetap ingin memanggil server untuk logging/verifikasi
+        /*
+        await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "sendReceipt" })
+        });
+        */
+
     } catch (err) {
         showAppAlert("Gagal Generate PDF: " + err.message, true);
     }
 }
 
-async function sendPdfToBackend(base64Pdf, rowData) {
-    try {
-        showAppAlert("Mengirim Email & WA...", false);
-        const response = await fetch(GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: "sendReceipt",
-                pdfBase64: base64Pdf,
-                filename: `Kuitansi_Lazismu_${rowData.row}.pdf`,
-                email: rowData.Email,
-                phone: rowData.NoHP,
-                nama: rowData.NamaDonatur,
-                nominal: formatter.format(rowData.Nominal)
-            })
-        });
-        const res = await response.json();
-        if(res.status !== 'success') throw new Error(res.message);
-        showAppAlert(`Sukses! Email terkirim.`);
-    } catch (error) {
-        showAppAlert("Gagal kirim: " + error.message, true);
-    }
-}
+// Hapus atau komentari fungsi sendPdfToBackend(base64Pdf, rowData) di admin.js
+// karena kita sudah menggunakan .save()
 
+// Tambahkan juga baris ini di admin.js, agar tombol print terdaftar:
+if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
 
 // Event Listeners
 refreshButton.addEventListener('click', fetchData);
