@@ -1,4 +1,4 @@
-// URL API SAMA DENGAN WEBAPP UTAMA (Pastikan URL ini sudah benar dari deploy terbaru Code.gs)
+// URL API UTAMA
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
 // === AUTHENTICATION ===
@@ -51,7 +51,7 @@ const editForm = document.getElementById('edit-form');
 
 // Filter & Paging Elements
 const filterSearchEl = document.getElementById('filter-search');
-const filterStatusEl = document.getElementById('filter-status'); // NEW
+const filterStatusEl = document.getElementById('filter-status'); 
 const filterDateFromEl = document.getElementById('filter-date-from');
 const filterDateToEl = document.getElementById('filter-date-to');
 const filterJenisEl = document.getElementById('filter-jenis');
@@ -150,7 +150,6 @@ async function fetchData() {
 }
 
 async function verifyDonation(rowNumber) {
-    // Tampilkan modal konfirmasi custom
     showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
         try {
             const response = await fetch(GAS_API_URL, {
@@ -159,9 +158,8 @@ async function verifyDonation(rowNumber) {
             });
             const res = await response.json();
             if(res.status !== 'success') throw new Error(res.message);
-            
             showAppAlert("Donasi berhasil diverifikasi!");
-            fetchData(); // Reload data
+            fetchData();
         } catch (error) {
             showAppAlert("Gagal verifikasi: " + error.message, true);
         }
@@ -169,36 +167,23 @@ async function verifyDonation(rowNumber) {
 }
 
 function calculateStatistics(data) {
-    let total = 0;
-    let count = data.length;
-    let maxVal = 0;
-    let todayTotal = 0;
+    let total = 0; let count = data.length; let maxVal = 0; let todayTotal = 0;
     const todayStr = new Date().toDateString();
-    
     const typeCounts = {};
 
     data.forEach(row => {
         const val = parseFloat(row.Nominal) || 0;
         total += val;
         if (val > maxVal) maxVal = val;
-        
-        if (new Date(row.Timestamp).toDateString() === todayStr) {
-            todayTotal += val;
-        }
-
+        if (new Date(row.Timestamp).toDateString() === todayStr) todayTotal += val;
         const type = row.JenisDonasi || 'Lainnya';
         typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
 
-    let topType = '-';
-    let topCount = 0;
+    let topType = '-'; let topCount = 0;
     for (const [key, val] of Object.entries(typeCounts)) {
-        if (val > topCount) {
-            topCount = val;
-            topType = key;
-        }
+        if (val > topCount) { topCount = val; topType = key; }
     }
-
     const avgVal = count > 0 ? total / count : 0;
 
     statTotalEl.textContent = formatter.format(total);
@@ -216,13 +201,11 @@ function renderTable() {
     const paginatedData = filteredData.slice(start, end);
 
     tableBodyEl.innerHTML = '';
-    
     if (filteredData.length === 0) {
         tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">Tidak ada data ditemukan</td></tr>';
         tableWrapperEl.classList.remove('hidden');
         return;
     }
-    
     tableWrapperEl.classList.remove('hidden');
 
     paginatedData.forEach(row => {
@@ -233,10 +216,7 @@ function renderTable() {
         const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
         const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-        // Logic Detail Donatur
-        let detailInfo = '';
-        let badgeTipe = 'bg-slate-100 text-slate-500';
-        
+        let detailInfo = ''; let badgeTipe = 'bg-slate-100 text-slate-500';
         if (row.TipeDonatur === 'santri') {
             badgeTipe = 'bg-orange-100 text-orange-600';
             detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
@@ -252,17 +232,14 @@ function renderTable() {
         if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
         if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
 
-        // Highlight Kode Unik
         const nominalVal = parseFloat(row.Nominal) || 0;
         let nominalHTML = formatter.format(nominalVal);
         if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
             nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
         }
 
-        // Logic Status & Tombol Verifikasi
         const status = row.Status || "Belum Verifikasi";
-        let statusBadge = '';
-        let verifyBtnHTML = '';
+        let statusBadge = ''; let verifyBtnHTML = '';
 
         if (status === 'Terverifikasi') {
             statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
@@ -291,11 +268,10 @@ function renderTable() {
             <td class="px-6 py-4 text-center">
                 <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
             </td>
-            <td class="px-6 py-4 text-center">
-                ${statusBadge}
-            </td>
+            <td class="px-6 py-4 text-center">${statusBadge}</td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${row.row}" title="Kirim Kuitansi"><i class="fas fa-print text-xs"></i></button>
                     ${verifyBtnHTML}
                     <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${row.row}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
                     <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
@@ -305,7 +281,6 @@ function renderTable() {
         tableBodyEl.appendChild(tr);
     });
 
-    // Update Pagination Info
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
     paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
     paginationPrevBtn.disabled = currentPage === 1;
@@ -313,8 +288,7 @@ function renderTable() {
 }
 
 function populateFilterDropdowns(data) {
-    const jenisSet = new Set();
-    const metodeSet = new Set();
+    const jenisSet = new Set(); const metodeSet = new Set();
     data.forEach(row => {
         if (row.JenisDonasi) jenisSet.add(row.JenisDonasi);
         if (row.MetodePembayaran) metodeSet.add(row.MetodePembayaran);
@@ -327,7 +301,7 @@ function populateFilterDropdowns(data) {
 
 function applyFilters() {
     const search = filterSearchEl.value.toLowerCase();
-    const status = filterStatusEl.value; // NEW
+    const status = filterStatusEl.value;
     const jenis = filterJenisEl.value;
     const metode = filterMetodeEl.value;
     let from = filterDateFromEl.valueAsDate;
@@ -337,23 +311,18 @@ function applyFilters() {
 
     filteredData = allDonationData.filter(row => {
         const time = new Date(row.Timestamp);
-        const rowStatus = row.Status || "Belum Verifikasi"; // Default status
-
+        const rowStatus = row.Status || "Belum Verifikasi";
         if (from && time < from) return false;
         if (to && time > to) return false;
         if (jenis && row.JenisDonasi !== jenis) return false;
         if (metode && row.MetodePembayaran !== metode) return false;
-        
-        // Filter Status Logic
         if (status && rowStatus !== status) return false;
-
         if (search) {
             const str = `${row.NamaDonatur} ${row.NISSantri} ${row.NoHP} ${row.Email} ${row.NamaSantri}`.toLowerCase();
             if (!str.includes(search)) return false;
         }
         return true;
     });
-
     calculateStatistics(filteredData);
     currentPage = 1;
     renderTable();
@@ -365,6 +334,7 @@ function resetFilters() {
     applyFilters();
 }
 
+// === EDIT DATA FUNCTIONS ===
 function openEditModal(rowNumber) {
     const data = allDonationData.find(r => r.row === rowNumber);
     if (!data) return;
@@ -435,6 +405,124 @@ function exportToCSV() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
+// === NEW: LOGIC CETAK KUITANSI ===
+
+function terbilang(nilai) {
+    nilai = Math.abs(nilai);
+    var huruf = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+    var temp = "";
+    if (nilai < 12) { temp = " " + huruf[nilai]; }
+    else if (nilai < 20) { temp = terbilang(nilai - 10) + " Belas"; }
+    else if (nilai < 100) { temp = terbilang(Math.floor(nilai / 10)) + " Puluh" + terbilang(nilai % 10); }
+    else if (nilai < 200) { temp = " Seratus" + terbilang(nilai - 100); }
+    else if (nilai < 1000) { temp = terbilang(Math.floor(nilai / 100)) + " Ratus" + terbilang(nilai % 100); }
+    else if (nilai < 2000) { temp = " Seribu" + terbilang(nilai - 1000); }
+    else if (nilai < 1000000) { temp = terbilang(Math.floor(nilai / 1000)) + " Ribu" + terbilang(nilai % 1000); }
+    else if (nilai < 1000000000) { temp = terbilang(Math.floor(nilai / 1000000)) + " Juta" + terbilang(nilai % 1000000); }
+    return temp;
+}
+
+async function handlePrintReceipt(rowNumber) {
+    const data = allDonationData.find(r => r.row === rowNumber);
+    if (!data) return;
+
+    showAppAlert("Sedang membuat PDF...", false);
+    
+    // 1. ISI DATA KE TEMPLATE
+    const dateObj = new Date(data.Timestamp);
+    const nominal = parseFloat(data.Nominal) || 0;
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = String(dateObj.getFullYear());
+
+    document.getElementById('rcpt-no').innerText = `KL-${data.row}`;
+    document.getElementById('rcpt-d1').innerText = d[0]; document.getElementById('rcpt-d2').innerText = d[1];
+    document.getElementById('rcpt-m1').innerText = m[0]; document.getElementById('rcpt-m2').innerText = m[1];
+    document.getElementById('rcpt-y1').innerText = y[2]; document.getElementById('rcpt-y2').innerText = y[3];
+
+    document.getElementById('rcpt-nama').innerText = data.NamaDonatur || 'Hamba Allah';
+    document.getElementById('rcpt-alamat').innerText = data.Alamat || '-';
+    document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
+    document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
+
+    // Clear Previous Values
+    ['zakat','infaq','lain'].forEach(k => {
+        document.getElementById(`rcpt-jenis-${k}`).innerText = '';
+        document.getElementById(`rcpt-nom-${k}`).innerText = '';
+    });
+
+    // Mapping Nominal
+    const fmtNominal = formatter.format(nominal);
+    const jenis = (data.JenisDonasi || '').toLowerCase();
+    
+    if(jenis.includes('zakat')) {
+        document.getElementById('rcpt-jenis-zakat').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-zakat').innerText = fmtNominal;
+    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh')) {
+        document.getElementById('rcpt-jenis-infaq').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-infaq').innerText = fmtNominal;
+    } else {
+        document.getElementById('rcpt-jenis-lain').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-lain').innerText = fmtNominal;
+    }
+    
+    document.getElementById('rcpt-total').innerText = fmtNominal;
+    
+    // Checkbox
+    document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
+    document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
+    document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
+    
+    // Terbilang
+    document.getElementById('rcpt-terbilang-1').innerText = terbilang(nominal) + " Rupiah";
+
+    // 2. GENERATE PDF
+    const element = document.getElementById('receipt-content');
+    const opt = {
+        margin: 0,
+        filename: `Kuitansi_${data.row}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
+    };
+
+    try {
+        const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob); 
+        reader.onloadend = async function() {
+            const base64data = reader.result.split(',')[1];
+            await sendPdfToBackend(base64data, data);
+        }
+    } catch (err) {
+        showAppAlert("Gagal Generate PDF: " + err.message, true);
+    }
+}
+
+async function sendPdfToBackend(base64Pdf, rowData) {
+    try {
+        showAppAlert("Mengirim Email & WA...", false);
+        const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: "sendReceipt",
+                pdfBase64: base64Pdf,
+                filename: `Kuitansi_Lazismu_${rowData.row}.pdf`,
+                email: rowData.Email,
+                phone: rowData.NoHP,
+                nama: rowData.NamaDonatur,
+                nominal: formatter.format(rowData.Nominal)
+            })
+        });
+        const res = await response.json();
+        if(res.status !== 'success') throw new Error(res.message);
+        showAppAlert(`Sukses! Email terkirim.`);
+    } catch (error) {
+        showAppAlert("Gagal kirim: " + error.message, true);
+    }
+}
+
+
 // Event Listeners
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
@@ -451,5 +539,6 @@ tableWrapperEl.addEventListener('click', (e) => {
     const row = parseInt(btn.dataset.row);
     if (btn.classList.contains('verify-btn')) verifyDonation(row);
     if (btn.classList.contains('edit-btn')) openEditModal(row);
-    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
+    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data?", () => executeDelete(row));
+    if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
 });
