@@ -51,6 +51,7 @@ const editForm = document.getElementById('edit-form');
 
 // Filter & Paging Elements
 const filterSearchEl = document.getElementById('filter-search');
+const filterStatusEl = document.getElementById('filter-status'); // NEW
 const filterDateFromEl = document.getElementById('filter-date-from');
 const filterDateToEl = document.getElementById('filter-date-to');
 const filterJenisEl = document.getElementById('filter-jenis');
@@ -326,6 +327,7 @@ function populateFilterDropdowns(data) {
 
 function applyFilters() {
     const search = filterSearchEl.value.toLowerCase();
+    const status = filterStatusEl.value; // NEW
     const jenis = filterJenisEl.value;
     const metode = filterMetodeEl.value;
     let from = filterDateFromEl.valueAsDate;
@@ -335,10 +337,16 @@ function applyFilters() {
 
     filteredData = allDonationData.filter(row => {
         const time = new Date(row.Timestamp);
+        const rowStatus = row.Status || "Belum Verifikasi"; // Default status
+
         if (from && time < from) return false;
         if (to && time > to) return false;
         if (jenis && row.JenisDonasi !== jenis) return false;
         if (metode && row.MetodePembayaran !== metode) return false;
+        
+        // Filter Status Logic
+        if (status && rowStatus !== status) return false;
+
         if (search) {
             const str = `${row.NamaDonatur} ${row.NISSantri} ${row.NoHP} ${row.Email} ${row.NamaSantri}`.toLowerCase();
             if (!str.includes(search)) return false;
@@ -352,7 +360,7 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    filterSearchEl.value = ''; filterJenisEl.value = ''; filterMetodeEl.value = '';
+    filterSearchEl.value = ''; filterStatusEl.value = ''; filterJenisEl.value = ''; filterMetodeEl.value = '';
     filterDateFromEl.value = ''; filterDateToEl.value = '';
     applyFilters();
 }
