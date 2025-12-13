@@ -1,32 +1,84 @@
-// URL API SAMA DENGAN WEBAPP UTAMA (Pastikan URL ini sudah benar dari deploy terbaru Code.gs)
+// --- IMPORT PERALATAN FIREBASE ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyD..... (PASTE KODE DARI FIREBASE CONSOLE DI SINI)",
+  authDomain: "lazismu-auth.firebaseapp.com",
+  projectId: "lazismu-auth",
+  storageBucket: "lazismu-auth.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+// --- NYALAKAN SATPAM ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// URL API GOOGLE SHEET (TETAP SAMA)
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
-// === AUTHENTICATION ===
-const PIN = "1918";
+// --- FUNGSI LOGIN (PINTU MASUK) ---
+// Kita pasang kuping di tombol login yang baru
+document.getElementById('btn-login-firebase').addEventListener('click', async () => {
+    const email = document.getElementById('admin-email').value;
+    const pass = document.getElementById('admin-password').value;
+    const errorMsg = document.getElementById('login-error');
+    const btn = document.getElementById('btn-login-firebase');
 
-function checkLogin() {
-    const input = document.getElementById('admin-pin').value;
-    if (input === PIN) {
-        sessionStorage.setItem('lazismu_admin_auth', 'true');
-        document.getElementById('login-overlay').classList.add('hidden');
-        fetchData();
-    } else {
-        alert("PIN Salah!");
-        document.getElementById('admin-pin').value = '';
-    }
-}
+    // Ubah tombol jadi loading
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+    btn.disabled = true;
+    errorMsg.classList.add('hidden');
 
-function logout() {
-    sessionStorage.removeItem('lazismu_admin_auth');
-    location.reload();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    if (sessionStorage.getItem('lazismu_admin_auth') === 'true') {
-        document.getElementById('login-overlay').classList.add('hidden');
-        fetchData();
+    try {
+        // Perintah ke Firebase: "Cek email password ini!"
+        await signInWithEmailAndPassword(auth, email, pass);
+        // Kalau berhasil, diam saja. Nanti 'Pengamat' di bawah yang bekerja otomatis.
+    } catch (error) {
+        // Kalau gagal
+        console.error(error);
+        errorMsg.textContent = "Email atau Password Salah!";
+        errorMsg.classList.remove('hidden');
+        btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
+        btn.disabled = false;
     }
 });
+
+// --- FUNGSI LOGOUT (KELUAR) ---
+// Kita ganti fungsi logout lama Anda
+window.logout = function() {
+    signOut(auth).then(() => {
+        location.reload();
+    }).catch((error) => {
+        console.error("Gagal logout", error);
+    });
+}
+
+// --- SANG PENGAMAT (YANG BEKERJA OTOMATIS) ---
+// Ini pengganti sessionStorage. Kode ini akan jalan sendiri ngecek status login.
+onAuthStateChanged(auth, (user) => {
+    const overlay = document.getElementById('login-overlay');
+    
+    if (user) {
+        // JIKA USER LOGIN (KUNCI COCOK)
+        console.log("Admin terdeteksi: " + user.email);
+        overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
+        
+        // Panggil fungsi ambil data Anda yang lama
+        fetchData(); 
+    } else {
+        // JIKA TIDAK LOGIN / BELUM LOGIN
+        console.log("Belum login");
+        overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
+    }
+});
+
+// ================================================================
+// BATAS SUCI: KODE DI BAWAH INI ADALAH KODE LAMA ANDA (VARIABLES, DST)
+// JANGAN DIHAPUS, BIARKAN SAJA MENYAMBUNG DI BAWAH SINI
+// ================================================================
 
 // === VARIABLES ===
 const loadingEl = document.getElementById('admin-loading');
