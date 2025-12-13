@@ -4,12 +4,12 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 
 // --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
 const firebaseConfig = {
-  apiKey: "AIzaSyD..... (PASTE KODE DARI FIREBASE CONSOLE DI SINI)",
+  apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
   authDomain: "lazismu-auth.firebaseapp.com",
   projectId: "lazismu-auth",
-  storageBucket: "lazismu-auth.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+  storageBucket: "lazismu-auth.firebasestorage.app",
+  messagingSenderId: "398570239500",
+  appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
 };
 
 // --- NYALAKAN SATPAM ---
