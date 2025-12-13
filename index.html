@@ -86,11 +86,20 @@
 
     <div id="login-overlay" class="fixed inset-0 z-[200] bg-slate-900 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-up">
-            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-600 text-3xl"><i class="fas fa-lock"></i></div>
+            <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 text-orange-600 text-3xl"><i class="fas fa-shield-alt"></i></div>
             <h2 class="text-2xl font-black text-slate-800 mb-2">Admin Panel</h2>
-            <p class="text-slate-500 mb-6 text-sm">Masukkan PIN keamanan.</p>
-            <input type="password" id="admin-pin" class="w-full text-center text-2xl font-bold tracking-widest p-4 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-orange-500 focus:ring-0 outline-none transition mb-4" placeholder="••••" maxlength="6">
-            <button onclick="checkLogin()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-orange-600 transition shadow-lg">Masuk Dashboard</button>
+            <p class="text-slate-500 mb-6 text-sm">Login untuk mengakses dashboard.</p>
+            
+            <input type="email" id="admin-email" class="w-full p-4 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-orange-500 focus:ring-0 outline-none transition mb-3 font-bold text-slate-700" placeholder="Email Admin">
+            
+            <input type="password" id="admin-password" class="w-full p-4 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-orange-500 focus:ring-0 outline-none transition mb-4 font-bold text-slate-700" placeholder="Password">
+            
+            <p id="login-error" class="text-red-500 text-xs font-bold mb-4 hidden"></p>
+
+            <button id="btn-login-firebase" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-orange-600 transition shadow-lg flex justify-center items-center gap-2">
+                <span>Masuk Dashboard</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
         </div>
     </div>
 
@@ -326,6 +335,7 @@
         </div>
     </div>
 
-    <script src="admin.js"></script>
+    <script type="module" src="admin.js"></script>
 </body>
 </html>
+
