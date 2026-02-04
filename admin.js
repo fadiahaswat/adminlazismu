@@ -3,6 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
+// PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
+// Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
 const firebaseConfig = {
   apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
   authDomain: "lazismu-auth.firebaseapp.com",
@@ -11,6 +13,11 @@ const firebaseConfig = {
   messagingSenderId: "398570239500",
   appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
 };
+
+// --- KONFIGURASI KEAMANAN ---
+// Email yang diizinkan untuk login ke admin dashboard
+const ALLOWED_ADMIN_EMAIL = "lazismumuallimin@gmail.com";
+const ALLOWED_ADMIN_EMAIL_LOWER = ALLOWED_ADMIN_EMAIL.toLowerCase();
 
 // --- NYALAKAN SATPAM ---
 const app = initializeApp(firebaseConfig);
@@ -32,13 +39,22 @@ document.getElementById('btn-login-firebase').addEventListener('click', async ()
     btn.disabled = true;
     errorMsg.classList.add('hidden');
 
+    // VALIDASI KEAMANAN: Cek apakah email yang dimasukkan adalah email admin yang diizinkan
+    if (email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
+        errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
+        errorMsg.classList.remove('hidden');
+        btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
+        btn.disabled = false;
+        return;
+    }
+
     try {
         // Perintah ke Firebase: "Cek email password ini!"
         await signInWithEmailAndPassword(auth, email, pass);
         // Kalau berhasil, diam saja. Nanti 'Pengamat' di bawah yang bekerja otomatis.
     } catch (error) {
-        // Kalau gagal
-        console.error(error);
+        // Kalau gagal - Log error tanpa detail sensitif
+        console.error("Login gagal");
         errorMsg.textContent = "Email atau Password Salah!";
         errorMsg.classList.remove('hidden');
         btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
@@ -60,10 +76,29 @@ window.logout = function() {
 // Ini pengganti sessionStorage. Kode ini akan jalan sendiri ngecek status login.
 onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('login-overlay');
+    const errorMsg = document.getElementById('login-error');
     
     if (user) {
-        // JIKA USER LOGIN (KUNCI COCOK)
-        console.log("Admin terdeteksi: " + user.email);
+        // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
+        if (user.email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
+            console.warn("Akses ditolak - email tidak sah");
+            // Logout otomatis jika bukan admin yang diizinkan
+            signOut(auth).then(() => {
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            }).catch((error) => {
+                console.error("Gagal logout");
+                // Tetap tampilkan pesan error meskipun logout gagal
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            });
+            return;
+        }
+        
+        // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
+        console.log("Admin terautentikasi");
         overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
         
         // Panggil fungsi ambil data Anda yang lama
@@ -79,6 +114,24 @@ onAuthStateChanged(auth, (user) => {
 // BATAS SUCI: KODE DI BAWAH INI ADALAH KODE LAMA ANDA (VARIABLES, DST)
 // JANGAN DIHAPUS, BIARKAN SAJA MENYAMBUNG DI BAWAH SINI
 // ================================================================
+
+// === SECURITY UTILITIES ===
+/**
+ * Fungsi untuk escape HTML special characters mencegah XSS attacks
+ * @param {string} text - Text yang akan di-escape
+ * @returns {string} - Text yang sudah aman dari XSS
+ */
+function escapeHtml(text) {
+    if (text == null) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
 
 // === VARIABLES ===
 const loadingEl = document.getElementById('admin-loading');
@@ -291,10 +344,10 @@ function renderTable() {
         
         if (row.TipeDonatur === 'santri') {
             badgeTipe = 'bg-orange-100 text-orange-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${row.NamaSantri || '-'}</div>`;
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${escapeHtml(row.NamaSantri) || '-'}</div>`;
         } else if (row.TipeDonatur === 'alumni') {
             badgeTipe = 'bg-blue-100 text-blue-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${row.DetailAlumni || '-'}</div>`;
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${escapeHtml(row.DetailAlumni) || '-'}</div>`;
         } else {
             detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
         }
@@ -320,7 +373,7 @@ function renderTable() {
             statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
         } else {
             statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><i class="fas fa-clock"></i> Pending</span>`;
-            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${row.row}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
+            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${escapeHtml(row.row)}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
         }
 
         tr.innerHTML = `
@@ -329,30 +382,30 @@ function renderTable() {
                 <span class="text-xs text-slate-400">${timeStr}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="font-bold text-slate-800 block">${row.NamaDonatur || 'Hamba Allah'}</span>
-                <span class="text-xs text-slate-400 block">${row.NoHP || '-'}</span>
+                <span class="font-bold text-slate-800 block">${escapeHtml(row.NamaDonatur) || 'Hamba Allah'}</span>
+                <span class="text-xs text-slate-400 block">${escapeHtml(row.NoHP) || '-'}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${row.TipeDonatur || 'Umum'}</span>
-                <div class="text-xs font-semibold text-slate-600">${row.JenisDonasi}</div>
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${escapeHtml(row.TipeDonatur) || 'Umum'}</span>
+                <div class="text-xs font-semibold text-slate-600">${escapeHtml(row.JenisDonasi)}</div>
                 ${detailInfo}
             </td>
             <td class="px-6 py-4 text-right">
                 <span class="font-black text-slate-800 text-sm">${nominalHTML}</span>
             </td>
             <td class="px-6 py-4 text-center">
-                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${row.MetodePembayaran || '-'}</span>
+                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${escapeHtml(row.MetodePembayaran) || '-'}</span>
             </td>
             <td class="px-6 py-4 text-center">
                 ${statusBadge}
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${row.row}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
+                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
 
                     ${verifyBtnHTML}
-                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${row.row}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
-                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${row.row}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${escapeHtml(row.row)}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
+                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${escapeHtml(row.row)}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
                 </div>
             </td>
         `;
