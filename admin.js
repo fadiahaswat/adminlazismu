@@ -319,21 +319,26 @@ document.addEventListener('keydown', (e) => {
         if (editModal && !editModal.classList.contains('hidden')) hideModal(editModal);
     }
     
-    // Keyboard shortcuts (with Ctrl/Cmd key)
-    if (e.ctrlKey || e.metaKey) {
+    // Keyboard shortcuts (with Alt key to avoid browser conflicts)
+    if (e.altKey && !e.ctrlKey && !e.metaKey) {
         switch(e.key.toLowerCase()) {
-            case 'r': // Ctrl+R to refresh (prevent default page reload)
+            case 'r': // Alt+R to refresh
                 e.preventDefault();
                 if (refreshButton) refreshButton.click();
                 break;
-            case 'e': // Ctrl+E to export CSV
+            case 'e': // Alt+E to export CSV
                 e.preventDefault();
                 if (exportCsvBtn) exportCsvBtn.click();
                 break;
-            case 'f': // Ctrl+F to focus search (prevent default browser search)
-                e.preventDefault();
-                if (filterSearchEl) filterSearchEl.focus();
-                break;
+        }
+    }
+    
+    // Ctrl/Cmd+F for search focus (override browser search)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        if (filterSearchEl) {
+            filterSearchEl.focus();
+            filterSearchEl.select();
         }
     }
 });
@@ -638,7 +643,13 @@ function applyFilters() {
         if (status && rowStatus !== status) return false;
 
         if (search) {
-            const str = `${row.NamaDonatur || ''} ${row.NISSantri || ''} ${row.NoHP || ''} ${row.Email || ''} ${row.NamaSantri || ''}`.toLowerCase();
+            const str = [
+                row.NamaDonatur, 
+                row.NISSantri, 
+                row.NoHP, 
+                row.Email, 
+                row.NamaSantri
+            ].filter(Boolean).join(' ').toLowerCase();
             if (!str.includes(search)) return false;
         }
         return true;
@@ -659,9 +670,11 @@ function resetFilters() {
     filterDateFromEl.value = ''; 
     filterDateToEl.value = '';
     
-    // Visual feedback
-    filterResetBtn.classList.add('rotate-180');
-    setTimeout(() => filterResetBtn.classList.remove('rotate-180'), 500);
+    // Visual feedback with null check
+    if (filterResetBtn) {
+        filterResetBtn.classList.add('rotate-180');
+        setTimeout(() => filterResetBtn.classList.remove('rotate-180'), 500);
+    }
     
     applyFilters();
 }
@@ -902,7 +915,8 @@ async function handlePrintReceipt(rowNumber) {
         }
 
         // 2. GENERATE PDF & DOWNLOAD LOKAL
-        const safeName = (data.NamaDonatur || 'Donatur').replace(/[^a-zA-Z0-9]/g, '_');
+        // Use encodeURIComponent for better filename handling with special characters
+        const safeName = encodeURIComponent(data.NamaDonatur || 'Donatur').substring(0, 50);
         const opt = {
             margin: 0,
             filename: `Kuitansi_Lazismu_${data.row}_${safeName}.pdf`,
