@@ -296,8 +296,7 @@ async function fetchData() {
         // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
         if (error.message && 
             !error.message.includes("6Le") && // ReCaptcha sitekey
-            !error.message.includes("http") && // URLs/endpoints
-            !error.message.includes("script.google.com") && // API endpoints
+            !error.message.includes("://") && // URLs/endpoints (protocol separator)
             error.message.length < 100) { // Hindari pesan error yang terlalu panjang
             errorMessage = "Gagal memuat data: " + error.message;
         }
@@ -329,8 +328,7 @@ async function verifyDonation(rowNumber) {
             // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
             if (error.message && 
                 !error.message.includes("6Le") && // ReCaptcha sitekey
-                !error.message.includes("http") && // URLs/endpoints
-                !error.message.includes("script.google.com") && // API endpoints
+                !error.message.includes("://") && // URLs/endpoints (protocol separator)
                 error.message.length < 100) { // Hindari pesan error yang terlalu panjang
                 errorMessage = "Gagal verifikasi: " + error.message;
             }
