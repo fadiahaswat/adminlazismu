@@ -22,6 +22,7 @@ const firebaseConfig = {
 const ALLOWED_ADMIN_EMAILS = [
     "lazismumuallimin@gmail.com",
     "ad.lazismumuallimin@gmail.com"
+    "andiaqillahfadiahaswat@gmail.com"
 ];
 const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
 
