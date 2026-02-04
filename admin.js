@@ -3,6 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
+// PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
+// Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
 const firebaseConfig = {
   apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
   authDomain: "lazismu-auth.firebaseapp.com",
@@ -11,6 +13,10 @@ const firebaseConfig = {
   messagingSenderId: "398570239500",
   appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
 };
+
+// --- KONFIGURASI KEAMANAN ---
+// Email yang diizinkan untuk login ke admin dashboard
+const ALLOWED_ADMIN_EMAIL = "lazismumuallimin@gmail.com";
 
 // --- NYALAKAN SATPAM ---
 const app = initializeApp(firebaseConfig);
@@ -31,6 +37,15 @@ document.getElementById('btn-login-firebase').addEventListener('click', async ()
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     btn.disabled = true;
     errorMsg.classList.add('hidden');
+
+    // VALIDASI KEAMANAN: Cek apakah email yang dimasukkan adalah email admin yang diizinkan
+    if (email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+        errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
+        errorMsg.classList.remove('hidden');
+        btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
+        btn.disabled = false;
+        return;
+    }
 
     try {
         // Perintah ke Firebase: "Cek email password ini!"
@@ -60,9 +75,22 @@ window.logout = function() {
 // Ini pengganti sessionStorage. Kode ini akan jalan sendiri ngecek status login.
 onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('login-overlay');
+    const errorMsg = document.getElementById('login-error');
     
     if (user) {
-        // JIKA USER LOGIN (KUNCI COCOK)
+        // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
+        if (user.email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+            console.warn("Akses ditolak untuk: " + user.email);
+            // Logout otomatis jika bukan admin yang diizinkan
+            signOut(auth).then(() => {
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            });
+            return;
+        }
+        
+        // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
         console.log("Admin terdeteksi: " + user.email);
         overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
         
