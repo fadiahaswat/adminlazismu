@@ -16,6 +16,12 @@ body {
     animation: fadeInUp 0.5s ease-out forwards;
 }
 
+/* Animasi Pulse untuk Success Icons */
+@keyframes pulse-soft {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
 /* Transisi Modal */
 .modal { 
     transition: opacity 0.25s ease, visibility 0.25s ease; 
@@ -55,4 +61,27 @@ input[type=number]::-webkit-outer-spin-button {
 }
 input[type=number] { 
     -moz-appearance: textfield; 
+}
+
+/* Loading Skeleton Animation */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, select, textarea {
+    transition: all 0.2s ease;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+    outline: 2px solid #f97316;
+    outline-offset: 2px;
 }

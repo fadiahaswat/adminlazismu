@@ -177,40 +177,47 @@ function escapeHtml(text) {
 }
 
 // === VARIABLES ===
-const loadingEl = document.getElementById('admin-loading');
-const tableWrapperEl = document.getElementById('admin-table-wrapper');
-const tableBodyEl = document.getElementById('table-body');
-const refreshButton = document.getElementById('refresh-button');
-const refreshIcon = document.getElementById('refresh-icon');
+// Safe DOM element retrieval with null checks
+function safeGetElement(id) {
+    const el = document.getElementById(id);
+    if (!el) console.warn(`Element not found: ${id}`);
+    return el;
+}
+
+const loadingEl = safeGetElement('admin-loading');
+const tableWrapperEl = safeGetElement('admin-table-wrapper');
+const tableBodyEl = safeGetElement('table-body');
+const refreshButton = safeGetElement('refresh-button');
+const refreshIcon = safeGetElement('refresh-icon');
 
 // Statistik Elements
-const statTotalEl = document.getElementById('admin-stat-total');
-const statDonaturEl = document.getElementById('admin-stat-donatur');
-const statHariIniEl = document.getElementById('admin-stat-hari-ini');
-const statTertinggiEl = document.getElementById('admin-stat-tertinggi');
-const statRataEl = document.getElementById('admin-stat-rata');
-const statTipeEl = document.getElementById('admin-stat-tipe');
+const statTotalEl = safeGetElement('admin-stat-total');
+const statDonaturEl = safeGetElement('admin-stat-donatur');
+const statHariIniEl = safeGetElement('admin-stat-hari-ini');
+const statTertinggiEl = safeGetElement('admin-stat-tertinggi');
+const statRataEl = safeGetElement('admin-stat-rata');
+const statTipeEl = safeGetElement('admin-stat-tipe');
 
 // Modal Elements
-const alertModal = document.getElementById('alert-modal');
-const confirmModal = document.getElementById('confirm-modal');
-const editModal = document.getElementById('edit-modal');
-const editForm = document.getElementById('edit-form');
+const alertModal = safeGetElement('alert-modal');
+const confirmModal = safeGetElement('confirm-modal');
+const editModal = safeGetElement('edit-modal');
+const editForm = safeGetElement('edit-form');
 
 // Filter & Paging Elements
-const filterSearchEl = document.getElementById('filter-search');
-const filterStatusEl = document.getElementById('filter-status'); 
-const filterDateFromEl = document.getElementById('filter-date-from');
-const filterDateToEl = document.getElementById('filter-date-to');
-const filterJenisEl = document.getElementById('filter-jenis');
-const filterMetodeEl = document.getElementById('filter-metode');
-const filterApplyBtn = document.getElementById('filter-apply-button');
-const filterResetBtn = document.getElementById('filter-reset-button');
-const exportCsvBtn = document.getElementById('export-csv-button');
-const paginationRowsEl = document.getElementById('pagination-rows');
-const paginationInfoEl = document.getElementById('pagination-info');
-const paginationPrevBtn = document.getElementById('pagination-prev');
-const paginationNextBtn = document.getElementById('pagination-next');
+const filterSearchEl = safeGetElement('filter-search');
+const filterStatusEl = safeGetElement('filter-status'); 
+const filterDateFromEl = safeGetElement('filter-date-from');
+const filterDateToEl = safeGetElement('filter-date-to');
+const filterJenisEl = safeGetElement('filter-jenis');
+const filterMetodeEl = safeGetElement('filter-metode');
+const filterApplyBtn = safeGetElement('filter-apply-button');
+const filterResetBtn = safeGetElement('filter-reset-button');
+const exportCsvBtn = safeGetElement('export-csv-button');
+const paginationRowsEl = safeGetElement('pagination-rows');
+const paginationInfoEl = safeGetElement('pagination-info');
+const paginationPrevBtn = safeGetElement('pagination-prev');
+const paginationNextBtn = safeGetElement('pagination-next');
 
 // Data State
 let allDonationData = [];
@@ -227,60 +234,105 @@ const formatter = new Intl.NumberFormat('id-ID', {
 
 // === MODAL FUNCTIONS ===
 function showModal(el) {
+    if (!el) return;
     el.classList.remove('hidden');
+    // Add accessibility
+    el.setAttribute('aria-hidden', 'false');
     setTimeout(() => {
         el.classList.remove('opacity-0');
-        el.querySelector('.modal-content').classList.remove('scale-95');
-        el.querySelector('.modal-content').classList.add('scale-100');
+        const content = el.querySelector('.modal-content');
+        if (content) {
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        }
     }, 10);
+    // Focus trap for accessibility
+    const firstFocusable = el.querySelector('button, input, select, textarea');
+    if (firstFocusable) firstFocusable.focus();
 }
 
 function hideModal(el) {
+    if (!el) return;
     el.classList.add('opacity-0');
-    el.querySelector('.modal-content').classList.remove('scale-100');
-    el.querySelector('.modal-content').classList.add('scale-95');
+    el.setAttribute('aria-hidden', 'true');
+    const content = el.querySelector('.modal-content');
+    if (content) {
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+    }
     setTimeout(() => el.classList.add('hidden'), 250);
 }
 
 function showAppAlert(msg, isError = false) {
-    const title = document.getElementById('alert-modal-title');
-    const message = document.getElementById('alert-modal-message');
-    const iconContainer = document.getElementById('alert-icon-container');
+    const title = safeGetElement('alert-modal-title');
+    const message = safeGetElement('alert-modal-message');
+    const iconContainer = safeGetElement('alert-icon-container');
+    
+    if (!title || !message || !iconContainer) return;
     
     title.textContent = isError ? "Terjadi Kesalahan" : "Berhasil";
     title.className = isError ? "text-xl font-black text-red-600 mb-2" : "text-xl font-black text-green-600 mb-2";
     message.textContent = msg;
     
     iconContainer.innerHTML = isError 
-        ? `<div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto"><i class="fas fa-times"></i></div>`
-        : `<div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto"><i class="fas fa-check"></i></div>`;
+        ? `<div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto animate-bounce"><i class="fas fa-times"></i></div>`
+        : `<div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto animate-bounce"><i class="fas fa-check"></i></div>`;
     
     showModal(alertModal);
+    
+    // Auto-close success messages after 3 seconds
+    if (!isError) {
+        setTimeout(() => hideModal(alertModal), 3000);
+    }
 }
 
 function showAppConfirm(msg, callback) {
-    document.getElementById('confirm-modal-message').textContent = msg;
+    const msgEl = safeGetElement('confirm-modal-message');
+    if (!msgEl) return;
+    msgEl.textContent = msg;
     confirmCallback = callback;
     showModal(confirmModal);
 }
 
-// Close Modal Listeners
-document.getElementById('alert-modal-close').onclick = () => hideModal(alertModal);
-document.getElementById('confirm-modal-cancel').onclick = () => hideModal(confirmModal);
-document.getElementById('edit-modal-close').onclick = () => hideModal(editModal);
-document.getElementById('edit-modal-cancel').onclick = () => hideModal(editModal);
-document.getElementById('confirm-modal-ok').onclick = () => { if (confirmCallback) confirmCallback(); hideModal(confirmModal); };
+// Close Modal Listeners with null checks
+const alertCloseBtn = safeGetElement('alert-modal-close');
+const confirmCancelBtn = safeGetElement('confirm-modal-cancel');
+const editCloseBtn = safeGetElement('edit-modal-close');
+const editCancelBtn = safeGetElement('edit-modal-cancel');
+const confirmOkBtn = safeGetElement('confirm-modal-ok');
+
+if (alertCloseBtn) alertCloseBtn.onclick = () => hideModal(alertModal);
+if (confirmCancelBtn) confirmCancelBtn.onclick = () => hideModal(confirmModal);
+if (editCloseBtn) editCloseBtn.onclick = () => hideModal(editModal);
+if (editCancelBtn) editCancelBtn.onclick = () => hideModal(editModal);
+if (confirmOkBtn) confirmOkBtn.onclick = () => { 
+    if (confirmCallback) confirmCallback(); 
+    hideModal(confirmModal); 
+};
+
+// ESC key to close modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        if (alertModal && !alertModal.classList.contains('hidden')) hideModal(alertModal);
+        if (confirmModal && !confirmModal.classList.contains('hidden')) hideModal(confirmModal);
+        if (editModal && !editModal.classList.contains('hidden')) hideModal(editModal);
+    }
+});
 
 
 // === CORE FUNCTIONS ===
 
 async function fetchData() {
+    if (!loadingEl || !tableWrapperEl || !refreshIcon) return;
+    
     loadingEl.classList.remove('hidden');
     tableWrapperEl.classList.add('hidden');
     refreshIcon.classList.add('fa-spin');
 
     try {
         const response = await fetch(GAS_API_URL);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
@@ -379,7 +431,9 @@ function calculateStatistics(data) {
 }
 
 function renderTable() {
-    rowsPerPage = parseInt(paginationRowsEl.value, 10);
+    if (!paginationRowsEl || !tableBodyEl || !tableWrapperEl || !paginationInfoEl || !paginationPrevBtn || !paginationNextBtn) return;
+    
+    rowsPerPage = parseInt(paginationRowsEl.value, 10) || 50;
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const paginatedData = filteredData.slice(start, end);
@@ -387,7 +441,7 @@ function renderTable() {
     tableBodyEl.innerHTML = '';
     
     if (filteredData.length === 0) {
-        tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">Tidak ada data ditemukan</td></tr>';
+        tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-16 text-slate-400"><div class="flex flex-col items-center gap-3"><i class="fas fa-inbox text-4xl opacity-20"></i><p class="font-bold">Tidak ada data ditemukan</p><p class="text-xs">Coba ubah filter pencarian Anda</p></div></td></tr>';
         tableWrapperEl.classList.remove('hidden');
         return;
     }
@@ -476,11 +530,25 @@ function renderTable() {
         tableBodyEl.appendChild(tr);
     });
 
-    // Update Pagination Info
+    // Update Pagination Info with better formatting
     const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
+    const showingStart = filteredData.length > 0 ? start + 1 : 0;
+    const showingEnd = Math.min(end, filteredData.length);
+    paginationInfoEl.textContent = `Menampilkan ${showingStart}-${showingEnd} dari ${filteredData.length} data`;
     paginationPrevBtn.disabled = currentPage === 1;
     paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    
+    // Add visual feedback for disabled buttons
+    if (paginationPrevBtn.disabled) {
+        paginationPrevBtn.classList.add('opacity-40', 'cursor-not-allowed');
+    } else {
+        paginationPrevBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+    }
+    if (paginationNextBtn.disabled) {
+        paginationNextBtn.classList.add('opacity-40', 'cursor-not-allowed');
+    } else {
+        paginationNextBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+    }
 }
 
 function populateFilterDropdowns(data) {
@@ -497,14 +565,24 @@ function populateFilterDropdowns(data) {
 }
 
 function applyFilters() {
-    const search = filterSearchEl.value.toLowerCase();
-    const status = filterStatusEl.value; // NEW
+    if (!filterSearchEl || !filterStatusEl || !filterJenisEl || !filterMetodeEl || !filterDateFromEl || !filterDateToEl) return;
+    
+    const search = filterSearchEl.value.toLowerCase().trim();
+    const status = filterStatusEl.value; 
     const jenis = filterJenisEl.value;
     const metode = filterMetodeEl.value;
     let from = filterDateFromEl.valueAsDate;
     let to = filterDateToEl.valueAsDate;
-    if(from) from.setHours(0,0,0,0);
-    if(to) to.setHours(23,59,59,999);
+    
+    // Proper date handling with timezone consideration
+    if(from) {
+        from = new Date(from);
+        from.setHours(0,0,0,0);
+    }
+    if(to) {
+        to = new Date(to);
+        to.setHours(23,59,59,999);
+    }
 
     filteredData = allDonationData.filter(row => {
         const time = new Date(row.Timestamp);
@@ -519,45 +597,75 @@ function applyFilters() {
         if (status && rowStatus !== status) return false;
 
         if (search) {
-            const str = `${row.NamaDonatur} ${row.NISSantri} ${row.NoHP} ${row.Email} ${row.NamaSantri}`.toLowerCase();
+            const str = `${row.NamaDonatur || ''} ${row.NISSantri || ''} ${row.NoHP || ''} ${row.Email || ''} ${row.NamaSantri || ''}`.toLowerCase();
             if (!str.includes(search)) return false;
         }
         return true;
     });
 
     calculateStatistics(filteredData);
-    currentPage = 1;
+    currentPage = 1; // Reset to first page when filters change
     renderTable();
 }
 
 function resetFilters() {
-    filterSearchEl.value = ''; filterStatusEl.value = ''; filterJenisEl.value = ''; filterMetodeEl.value = '';
-    filterDateFromEl.value = ''; filterDateToEl.value = '';
+    if (!filterSearchEl || !filterStatusEl || !filterJenisEl || !filterMetodeEl || !filterDateFromEl || !filterDateToEl) return;
+    
+    filterSearchEl.value = ''; 
+    filterStatusEl.value = ''; 
+    filterJenisEl.value = ''; 
+    filterMetodeEl.value = '';
+    filterDateFromEl.value = ''; 
+    filterDateToEl.value = '';
+    
+    // Visual feedback
+    filterResetBtn.classList.add('rotate-180');
+    setTimeout(() => filterResetBtn.classList.remove('rotate-180'), 500);
+    
     applyFilters();
 }
 
 function openEditModal(rowNumber) {
     const data = allDonationData.find(r => r.row === rowNumber);
-    if (!data) return;
-    document.getElementById('edit-row-number').value = data.row;
+    if (!data) {
+        showAppAlert("Data tidak ditemukan", true);
+        return;
+    }
+    
+    const rowNumEl = safeGetElement('edit-row-number');
+    if (!rowNumEl) return;
+    
+    rowNumEl.value = data.row;
     const fields = ['JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'NoHP', 'Email', 'NoKTP', 'Alamat', 'TipeDonatur', 'DetailAlumni', 'NamaSantri', 'NISSantri', 'KelasSantri', 'PesanDoa'];
-    fields.forEach(f => { const el = document.getElementById(`edit-${f}`); if(el) el.value = data[f] || ''; });
+    fields.forEach(f => { 
+        const el = safeGetElement(`edit-${f}`); 
+        if(el) el.value = data[f] || ''; 
+    });
     showModal(editModal);
 }
 
 async function handleEditSubmit(e) {
     e.preventDefault();
-    const btn = document.getElementById('edit-modal-save');
-    const txt = document.getElementById('edit-save-text');
-    const load = document.getElementById('edit-save-loading');
-    btn.disabled = true; txt.classList.add('hidden'); load.classList.remove('hidden');
+    const btn = safeGetElement('edit-modal-save');
+    const txt = safeGetElement('edit-save-text');
+    const load = safeGetElement('edit-save-loading');
+    const rowNumEl = safeGetElement('edit-row-number');
+    
+    if (!btn || !txt || !load || !rowNumEl || !editForm) return;
+    
+    btn.disabled = true; 
+    txt.classList.add('hidden'); 
+    load.classList.remove('hidden');
 
-    const rowNumber = document.getElementById('edit-row-number').value;
+    const rowNumber = rowNumEl.value;
     const payload = {};
     const inputs = editForm.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
         const key = input.id.replace('edit-', '');
-        if (key && key !== 'row-number') payload[key] = input.value;
+        if (key && key !== 'row-number') {
+            // Sanitize input to prevent XSS
+            payload[key] = escapeHtml(input.value);
+        }
     });
 
     try {
@@ -565,13 +673,21 @@ async function handleEditSubmit(e) {
             method: 'POST',
             body: JSON.stringify({ action: "update", row: rowNumber, payload: payload })
         });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
-        hideModal(editModal); showAppAlert("Data berhasil diperbarui!"); fetchData();
+        
+        hideModal(editModal); 
+        showAppAlert("Data berhasil diperbarui!"); 
+        fetchData();
     } catch (err) {
-        showAppAlert("Gagal menyimpan: " + err.message, true);
+        showAppAlert("Gagal menyimpan: " + (err.message || "Unknown error"), true);
     } finally {
-        btn.disabled = false; txt.classList.remove('hidden'); load.classList.add('hidden');
+        btn.disabled = false; 
+        txt.classList.remove('hidden'); 
+        load.classList.add('hidden');
     }
 }
 
@@ -733,23 +849,43 @@ async function handlePrintReceipt(rowNumber) {
 }
 
 
-// Event Listeners
-refreshButton.addEventListener('click', fetchData);
-filterApplyBtn.addEventListener('click', applyFilters);
-filterResetBtn.addEventListener('click', resetFilters);
-exportCsvBtn.addEventListener('click', exportToCSV);
-editForm.addEventListener('submit', handleEditSubmit);
-paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
-paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
-paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
+// Event Listeners with defensive checks
+if (refreshButton) refreshButton.addEventListener('click', fetchData);
+if (filterApplyBtn) filterApplyBtn.addEventListener('click', applyFilters);
+if (filterResetBtn) filterResetBtn.addEventListener('click', resetFilters);
+if (exportCsvBtn) exportCsvBtn.addEventListener('click', exportToCSV);
+if (editForm) editForm.addEventListener('submit', handleEditSubmit);
+if (paginationRowsEl) paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
+if (paginationPrevBtn) paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
+if (paginationNextBtn) paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
 
-// Delegate Click Actions
-tableWrapperEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('button'); if (!btn) return;
-    const row = parseInt(btn.dataset.row);
-    if (btn.classList.contains('verify-btn')) verifyDonation(row);
-    if (btn.classList.contains('edit-btn')) openEditModal(row);
-    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
-    // Handle Print Button
-    if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
-});
+// Add debounced search for better UX
+let searchTimeout;
+if (filterSearchEl) {
+    filterSearchEl.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            applyFilters();
+        }, 300); // Wait 300ms after user stops typing
+    });
+}
+
+// Delegate Click Actions with better error handling
+if (tableWrapperEl) {
+    tableWrapperEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('button'); 
+        if (!btn || !btn.dataset.row) return;
+        
+        const row = parseInt(btn.dataset.row, 10);
+        if (isNaN(row)) return;
+        
+        // Add visual feedback
+        btn.classList.add('scale-95');
+        setTimeout(() => btn.classList.remove('scale-95'), 100);
+        
+        if (btn.classList.contains('verify-btn')) verifyDonation(row);
+        if (btn.classList.contains('edit-btn')) openEditModal(row);
+        if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
+        if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
+    });
+}

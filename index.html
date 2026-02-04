@@ -101,39 +101,39 @@
         </div>
     </div>
 
-    <div id="alert-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div id="alert-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title">
         <div class="modal-content bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 text-center scale-95 transform transition-all duration-300">
             <div id="alert-icon-container" class="mb-5 [&>div]:mx-auto"></div>
             <h3 id="alert-modal-title" class="text-xl font-bold text-slate-800 mb-2"></h3>
             <p id="alert-modal-message" class="text-slate-500 mb-8 text-sm leading-relaxed"></p>
-            <button id="alert-modal-close" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3.5 rounded-xl font-bold transition-colors">Tutup</button>
+            <button id="alert-modal-close" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-3.5 rounded-xl font-bold transition-all active:scale-95" aria-label="Tutup dialog">Tutup</button>
         </div>
     </div>
 
-    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div id="confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
         <div class="modal-content bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 text-center scale-95 transform transition-all duration-300 border border-white/20">
             <div class="w-16 h-16 bg-yellow-50 text-yellow-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-6 shadow-sm ring-4 ring-yellow-50"><i class="fas fa-exclamation-triangle"></i></div>
-            <h3 class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Tindakan</h3>
+            <h3 id="confirm-modal-title" class="text-lg font-bold text-slate-800 mb-2">Konfirmasi Tindakan</h3>
             <p id="confirm-modal-message" class="text-slate-500 mb-8 text-sm">Apakah Anda yakin ingin melanjutkan?</p>
             <div class="flex gap-3">
-                <button id="confirm-modal-cancel" class="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors">Batal</button>
-                <button id="confirm-modal-ok" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-600/20">Ya, Proses</button>
+                <button id="confirm-modal-cancel" class="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-50 transition-all active:scale-95" aria-label="Batal">Batal</button>
+                <button id="confirm-modal-ok" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95" aria-label="Konfirmasi">Ya, Proses</button>
             </div>
         </div>
     </div>
 
-    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[98] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[98] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
         <div class="modal-content bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] scale-95 transform transition-all duration-300 overflow-hidden ring-1 ring-black/5">
             <form id="edit-form" class="flex flex-col h-full">
                 <div class="flex justify-between items-center px-8 py-6 border-b border-slate-100 bg-white">
                     <div>
-                        <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h3 id="edit-modal-title" class="text-xl font-bold text-slate-800 flex items-center gap-2">
                             <span class="w-2 h-6 bg-orange-500 rounded-full inline-block"></span>
                             Edit Data Donasi
                         </h3>
                         <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1 pl-4">Update Database Transaksi</p>
                     </div>
-                    <button id="edit-modal-close" type="button" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition flex items-center justify-center group"><i class="fas fa-times text-lg group-hover:rotate-90 transition-transform"></i></button>
+                    <button id="edit-modal-close" type="button" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition flex items-center justify-center group active:scale-95" aria-label="Tutup modal edit"><i class="fas fa-times text-lg group-hover:rotate-90 transition-transform"></i></button>
                 </div>
                 
                 <div class="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
@@ -146,20 +146,20 @@
                             </h4>
                             <div class="space-y-5">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nominal (Rp)</label>
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nominal (Rp) <span class="text-red-500">*</span></label>
                                     <div class="relative">
                                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
-                                        <input type="number" id="edit-Nominal" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none">
+                                        <input type="number" id="edit-Nominal" required min="0" step="1000" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="100000">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Jenis Donasi</label>
-                                    <input type="text" id="edit-JenisDonasi" class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none">
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Jenis Donasi <span class="text-red-500">*</span></label>
+                                    <input type="text" id="edit-JenisDonasi" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="Infaq Pendidikan">
                                 </div>
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Metode Bayar</label>
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Metode Bayar <span class="text-red-500">*</span></label>
                                     <div class="relative">
-                                        <select id="edit-MetodePembayaran" class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer">
+                                        <select id="edit-MetodePembayaran" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer">
                                             <option value="Transfer">Transfer Bank</option>
                                             <option value="QRIS">QRIS / E-Wallet</option>
                                             <option value="Tunai">Tunai / Cash</option>
@@ -176,14 +176,14 @@
                             </h4>
                             <div class="space-y-5">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nama Lengkap</label>
-                                    <input type="text" id="edit-NamaDonatur" class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none">
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                                    <input type="text" id="edit-NamaDonatur" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="Nama Donatur">
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">WhatsApp</label>
                                     <div class="relative">
                                         <i class="fab fa-whatsapp absolute left-3 top-1/2 -translate-y-1/2 text-green-500"></i>
-                                        <input type="tel" id="edit-NoHP" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none">
+                                        <input type="tel" id="edit-NoHP" pattern="[0-9]{10,15}" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="08xxxxxxxxxx">
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
@@ -193,7 +193,7 @@
                                     </div>
                                     <div>
                                         <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">NIK/KTP</label>
-                                        <input type="text" id="edit-NoKTP" placeholder="16 digit" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
+                                        <input type="text" id="edit-NoKTP" pattern="[0-9]{16}" maxlength="16" placeholder="16 digit" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
                                     </div>
                                 </div>
                             </div>
@@ -248,8 +248,8 @@
                 </div>
 
                 <div class="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3 rounded-b-[2.5rem]">
-                    <button id="edit-modal-cancel" type="button" class="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-800 transition-all">Batal</button>
-                    <button id="edit-modal-save" type="submit" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2">
+                    <button id="edit-modal-cancel" type="button" class="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95">Batal</button>
+                    <button id="edit-modal-save" type="submit" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span id="edit-save-text">Simpan Perubahan</span> 
                         <span id="edit-save-loading" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
                     </button>
