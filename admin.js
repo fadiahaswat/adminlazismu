@@ -21,7 +21,7 @@ const firebaseConfig = {
 // Email yang diizinkan untuk login ke admin dashboard
 const ALLOWED_ADMIN_EMAILS = [
     "lazismumuallimin@gmail.com",
-    "ad.lazismumuallimin@gmail.com"
+    "ad.lazismumuallimin@gmail.com",
     "andiaqillahfadiahaswat@gmail.com"
 ];
 const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
