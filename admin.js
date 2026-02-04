@@ -17,6 +17,7 @@ const firebaseConfig = {
 // --- KONFIGURASI KEAMANAN ---
 // Email yang diizinkan untuk login ke admin dashboard
 const ALLOWED_ADMIN_EMAIL = "lazismumuallimin@gmail.com";
+const ALLOWED_ADMIN_EMAIL_LOWER = ALLOWED_ADMIN_EMAIL.toLowerCase();
 
 // --- NYALAKAN SATPAM ---
 const app = initializeApp(firebaseConfig);
@@ -39,7 +40,7 @@ document.getElementById('btn-login-firebase').addEventListener('click', async ()
     errorMsg.classList.add('hidden');
 
     // VALIDASI KEAMANAN: Cek apakah email yang dimasukkan adalah email admin yang diizinkan
-    if (email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+    if (email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
         errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
         errorMsg.classList.remove('hidden');
         btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
@@ -79,10 +80,16 @@ onAuthStateChanged(auth, (user) => {
     
     if (user) {
         // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
-        if (user.email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL.toLowerCase()) {
+        if (user.email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
             console.warn("Akses ditolak untuk: " + user.email);
             // Logout otomatis jika bukan admin yang diizinkan
             signOut(auth).then(() => {
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+            }).catch((error) => {
+                console.error("Gagal logout:", error);
+                // Tetap tampilkan pesan error meskipun logout gagal
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
                 overlay.classList.remove('hidden');
