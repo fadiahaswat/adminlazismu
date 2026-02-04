@@ -37,7 +37,7 @@ try {
     isTokenAutoRefreshEnabled: true
   });
 } catch (error) {
-  console.error("App Check initialization warning - continuing without App Check");
+  console.warn("App Check initialization failed - continuing without App Check");
   // App Check gagal, tapi aplikasi tetap bisa jalan (optional security layer)
 }
 
@@ -292,8 +292,13 @@ async function fetchData() {
         console.error("Fetch error:", error);
         // Gunakan pesan error yang user-friendly, jangan expose raw error
         let errorMessage = "Tidak dapat memuat data. Periksa koneksi internet Anda.";
-        if (error.message && !error.message.includes("6Le")) {
-            // Hanya tampilkan error.message jika bukan ReCaptcha sitekey
+        
+        // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
+        if (error.message && 
+            !error.message.includes("6Le") && // ReCaptcha sitekey
+            !error.message.includes("http") && // URLs/endpoints
+            !error.message.includes("script.google.com") && // API endpoints
+            error.message.length < 100) { // Hindari pesan error yang terlalu panjang
             errorMessage = "Gagal memuat data: " + error.message;
         }
         showAppAlert(errorMessage, true);
@@ -318,9 +323,15 @@ async function verifyDonation(rowNumber) {
             fetchData(); // Reload data
         } catch (error) {
             console.error("Verification error:", error);
-            // Gunakan pesan error yang user-friendly
+            // Gunakan pesan error yang user-friendly, jangan expose raw error
             let errorMessage = "Gagal memverifikasi. Coba lagi nanti.";
-            if (error.message && !error.message.includes("6Le")) {
+            
+            // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
+            if (error.message && 
+                !error.message.includes("6Le") && // ReCaptcha sitekey
+                !error.message.includes("http") && // URLs/endpoints
+                !error.message.includes("script.google.com") && // API endpoints
+                error.message.length < 100) { // Hindari pesan error yang terlalu panjang
                 errorMessage = "Gagal verifikasi: " + error.message;
             }
             showAppAlert(errorMessage, true);
