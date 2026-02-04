@@ -302,26 +302,76 @@ function showAppConfirm(msg, callback) {
 // Close Modal Listeners with null checks
 const alertCloseBtn = safeGetElement('alert-modal-close');
 const confirmCancelBtn = safeGetElement('confirm-modal-cancel');
-const editCloseBtn = safeGetElement('edit-modal-close');
-const editCancelBtn = safeGetElement('edit-modal-cancel');
+const editDrawerCloseBtn = safeGetElement('edit-drawer-close');
+const editDrawerCancelBtn = safeGetElement('edit-drawer-cancel');
 const confirmOkBtn = safeGetElement('confirm-modal-ok');
 
 if (alertCloseBtn) alertCloseBtn.onclick = () => hideModal(alertModal);
 if (confirmCancelBtn) confirmCancelBtn.onclick = () => hideModal(confirmModal);
-if (editCloseBtn) editCloseBtn.onclick = () => hideModal(editModal);
-if (editCancelBtn) editCancelBtn.onclick = () => hideModal(editModal);
+if (editDrawerCloseBtn) editDrawerCloseBtn.onclick = () => hideEditDrawer();
+if (editDrawerCancelBtn) editDrawerCancelBtn.onclick = () => hideEditDrawer();
 if (confirmOkBtn) confirmOkBtn.onclick = () => { 
     if (confirmCallback) confirmCallback(); 
     hideModal(confirmModal); 
 };
 
+// === EDIT DRAWER FUNCTIONS ===
+function showEditDrawer() {
+    const drawer = safeGetElement('edit-drawer');
+    const backdrop = safeGetElement('edit-drawer-backdrop');
+    
+    if (!drawer) return;
+    
+    // Show backdrop
+    if (backdrop) {
+        backdrop.classList.remove('hidden');
+        setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+    }
+    
+    // Slide in drawer
+    drawer.classList.remove('translate-x-full');
+    drawer.setAttribute('aria-hidden', 'false');
+    
+    // Focus first input
+    setTimeout(() => {
+        const firstInput = drawer.querySelector('input:not([type="hidden"]), select, textarea');
+        if (firstInput) firstInput.focus();
+    }, 300);
+}
+
+function hideEditDrawer() {
+    const drawer = safeGetElement('edit-drawer');
+    const backdrop = safeGetElement('edit-drawer-backdrop');
+    
+    if (!drawer) return;
+    
+    // Slide out drawer
+    drawer.classList.add('translate-x-full');
+    drawer.setAttribute('aria-hidden', 'true');
+    
+    // Hide backdrop
+    if (backdrop) {
+        backdrop.classList.add('opacity-0');
+        setTimeout(() => backdrop.classList.add('hidden'), 300);
+    }
+}
+
+// Close drawer when clicking backdrop
+const editDrawerBackdrop = safeGetElement('edit-drawer-backdrop');
+if (editDrawerBackdrop) {
+    editDrawerBackdrop.addEventListener('click', hideEditDrawer);
+}
+
 // ESC key to close modals and keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    // ESC to close modals
+    // ESC to close modals and drawer
     if (e.key === 'Escape') {
         if (alertModal && !alertModal.classList.contains('hidden')) hideModal(alertModal);
         if (confirmModal && !confirmModal.classList.contains('hidden')) hideModal(confirmModal);
-        if (editModal && !editModal.classList.contains('hidden')) hideModal(editModal);
+        
+        // Close drawer if open
+        const drawer = safeGetElement('edit-drawer');
+        if (drawer && !drawer.classList.contains('translate-x-full')) hideEditDrawer();
     }
     
     // Keyboard shortcuts (with Alt key to avoid browser conflicts)
@@ -973,12 +1023,12 @@ function openEditModal(rowNumber) {
         const el = safeGetElement(`edit-${f}`); 
         if(el) el.value = data[f] || ''; 
     });
-    showModal(editModal);
+    showEditDrawer();
 }
 
 async function handleEditSubmit(e) {
     e.preventDefault();
-    const btn = safeGetElement('edit-modal-save');
+    const btn = safeGetElement('edit-drawer-save');
     const txt = safeGetElement('edit-save-text');
     const load = safeGetElement('edit-save-loading');
     const rowNumEl = safeGetElement('edit-row-number');
@@ -1011,7 +1061,7 @@ async function handleEditSubmit(e) {
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
         
-        hideModal(editModal); 
+        hideEditDrawer(); 
         showAppAlert("Data berhasil diperbarui!"); 
         fetchData();
     } catch (err) {

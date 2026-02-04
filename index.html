@@ -130,116 +130,128 @@
         </div>
     </div>
 
-    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[98] flex items-center justify-center p-4 opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
-        <div class="modal-content bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] scale-95 transform transition-all duration-300 overflow-hidden ring-1 ring-black/5">
+    <!-- Slide-Over Drawer for Edit (replaces modal) -->
+    <div id="edit-drawer" class="fixed inset-y-0 right-0 z-[98] w-full md:w-[600px] transform translate-x-full transition-transform duration-300 ease-in-out" role="dialog" aria-modal="true" aria-labelledby="edit-drawer-title">
+        <!-- Backdrop -->
+        <div id="edit-drawer-backdrop" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm -z-10 opacity-0 transition-opacity duration-300"></div>
+        
+        <!-- Drawer Panel -->
+        <div class="relative h-full bg-white shadow-2xl flex flex-col">
             <form id="edit-form" class="flex flex-col h-full">
-                <div class="flex justify-between items-center px-8 py-6 border-b border-slate-100 bg-white">
+                <!-- Header -->
+                <div class="flex justify-between items-center px-6 py-5 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-white">
                     <div>
-                        <h3 id="edit-modal-title" class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <h3 id="edit-drawer-title" class="text-xl font-bold text-slate-800 flex items-center gap-2">
                             <span class="w-2 h-6 bg-orange-500 rounded-full inline-block"></span>
                             Edit Data Donasi
                         </h3>
-                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1 pl-4">Update Database Transaksi</p>
+                        <p class="text-xs text-slate-500 mt-1 pl-4">Update informasi transaksi</p>
                     </div>
-                    <button id="edit-modal-close" type="button" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition flex items-center justify-center group active:scale-95" aria-label="Tutup modal edit"><i class="fas fa-times text-lg group-hover:rotate-90 transition-transform"></i></button>
+                    <button id="edit-drawer-close" type="button" class="w-10 h-10 rounded-full bg-white text-slate-400 hover:bg-red-50 hover:text-red-500 transition flex items-center justify-center group border border-slate-200 active:scale-95" aria-label="Tutup drawer">
+                        <i class="fas fa-times text-lg group-hover:rotate-90 transition-transform"></i>
+                    </button>
                 </div>
                 
-                <div class="p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
+                <!-- Content - Scrollable -->
+                <div class="p-6 space-y-5 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/30">
                     <input type="hidden" id="edit-row-number">
                     
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-50 pb-2">
-                                <i class="fas fa-receipt text-orange-500"></i> Detail Transaksi
-                            </h4>
-                            <div class="space-y-5">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nominal (Rp) <span class="text-red-500">*</span></label>
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
-                                        <input type="number" id="edit-Nominal" required min="0" step="1000" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="100000">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Jenis Donasi <span class="text-red-500">*</span></label>
-                                    <input type="text" id="edit-JenisDonasi" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="Infaq Pendidikan">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Metode Bayar <span class="text-red-500">*</span></label>
-                                    <div class="relative">
-                                        <select id="edit-MetodePembayaran" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer">
-                                            <option value="Transfer">Transfer Bank</option>
-                                            <option value="QRIS">QRIS / E-Wallet</option>
-                                            <option value="Tunai">Tunai / Cash</option>
-                                        </select>
-                                        <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
-                                    </div>
+                    <!-- Detail Transaksi -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 pb-2 border-b border-slate-100">
+                            <i class="fas fa-receipt text-orange-500"></i> Detail Transaksi
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Nominal (Rp) <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
+                                    <input type="number" id="edit-Nominal" required min="0" step="1000" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="100000">
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-                            <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-slate-50 pb-2">
-                                <i class="fas fa-user text-blue-500"></i> Info Donatur
-                            </h4>
-                            <div class="space-y-5">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Nama Lengkap <span class="text-red-500">*</span></label>
-                                    <input type="text" id="edit-NamaDonatur" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="Nama Donatur">
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">WhatsApp</label>
-                                    <div class="relative">
-                                        <i class="fab fa-whatsapp absolute left-3 top-1/2 -translate-y-1/2 text-green-500"></i>
-                                        <input type="tel" id="edit-NoHP" pattern="[0-9]{10,15}" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="08xxxxxxxxxx">
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Email</label>
-                                        <input type="email" id="edit-Email" placeholder="user@mail.com" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">NIK/KTP</label>
-                                        <input type="text" id="edit-NoKTP" pattern="[0-9]{16}" maxlength="16" placeholder="16 digit" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
-                                    </div>
-                                </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Jenis Donasi <span class="text-red-500">*</span></label>
+                                <input type="text" id="edit-JenisDonasi" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none" placeholder="Infaq Pendidikan">
                             </div>
-                        </div>
-
-                        <div class="bg-gradient-to-b from-orange-50 to-white p-6 rounded-3xl border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
-                            <h4 class="text-xs font-black text-orange-800/70 uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-orange-100 pb-2">
-                                <i class="fas fa-graduation-cap text-orange-600"></i> Afiliasi Santri
-                            </h4>
-                            <div class="space-y-5">
-                                <div>
-                                    <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5 ml-1">Tipe Relasi</label>
-                                    <div class="relative">
-                                        <select id="edit-TipeDonatur" class="w-full px-3 py-2.5 bg-white border-orange-200 rounded-xl text-sm font-bold text-orange-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer shadow-sm">
-                                            <option value="santri">Wali Santri Aktif</option>
-                                            <option value="alumni">Alumni</option>
-                                            <option value="umum">Umum / Simpatisan</option>
-                                        </select>
-                                        <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 text-xs pointer-events-none"></i>
-                                    </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Metode Bayar <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <select id="edit-MetodePembayaran" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer">
+                                        <option value="Transfer">Transfer Bank</option>
+                                        <option value="QRIS">QRIS / E-Wallet</option>
+                                        <option value="Tunai">Tunai / Cash</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
                                 </div>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5 ml-1">Nama Santri</label>
-                                        <input type="text" id="edit-NamaSantri" class="w-full px-3 py-2 bg-white border-orange-200 rounded-xl text-xs font-medium focus:border-orange-500 outline-none transition">
-                                    </div>
-                                    <div>
-                                        <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5 ml-1">Kelas/Angkatan</label>
-                                        <input type="text" id="edit-KelasSantri" class="w-full px-3 py-2 bg-white border-orange-200 rounded-xl text-xs font-medium focus:border-orange-500 outline-none transition">
-                                    </div>
-                                </div>
-                                <input type="hidden" id="edit-NISSantri">
-                                <input type="hidden" id="edit-DetailAlumni">
                             </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Info Donatur -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 pb-2 border-b border-slate-100">
+                            <i class="fas fa-user text-blue-500"></i> Info Donatur
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Nama Lengkap <span class="text-red-500">*</span></label>
+                                <input type="text" id="edit-NamaDonatur" required class="w-full px-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="Nama Donatur">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-500 mb-1.5">WhatsApp</label>
+                                <div class="relative">
+                                    <i class="fab fa-whatsapp absolute left-3 top-1/2 -translate-y-1/2 text-green-500"></i>
+                                    <input type="tel" id="edit-NoHP" pattern="[0-9]{10,15}" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none" placeholder="08xxxxxxxxxx">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5">Email</label>
+                                    <input type="email" id="edit-Email" placeholder="user@mail.com" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5">NIK/KTP</label>
+                                    <input type="text" id="edit-NoKTP" pattern="[0-9]{16}" maxlength="16" placeholder="16 digit" class="w-full px-3 py-2 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium focus:border-blue-500 outline-none transition">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Afiliasi Santri -->
+                    <div class="bg-gradient-to-b from-orange-50 to-white p-5 rounded-2xl border border-orange-100 shadow-sm">
+                        <h4 class="text-xs font-black text-orange-800/70 uppercase tracking-widest mb-4 flex items-center gap-2 pb-2 border-b border-orange-100">
+                            <i class="fas fa-graduation-cap text-orange-600"></i> Afiliasi Santri
+                        </h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5">Tipe Relasi</label>
+                                <div class="relative">
+                                    <select id="edit-TipeDonatur" class="w-full px-3 py-2.5 bg-white border-orange-200 rounded-xl text-sm font-bold text-orange-900 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none appearance-none cursor-pointer shadow-sm">
+                                        <option value="santri">Wali Santri Aktif</option>
+                                        <option value="alumni">Alumni</option>
+                                        <option value="umum">Umum / Simpatisan</option>
+                                    </select>
+                                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-orange-400 text-xs pointer-events-none"></i>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5">Nama Santri</label>
+                                    <input type="text" id="edit-NamaSantri" class="w-full px-3 py-2 bg-white border-orange-200 rounded-xl text-xs font-medium focus:border-orange-500 outline-none transition">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-orange-900/60 mb-1.5">Kelas/Angkatan</label>
+                                    <input type="text" id="edit-KelasSantri" class="w-full px-3 py-2 bg-white border-orange-200 rounded-xl text-xs font-medium focus:border-orange-500 outline-none transition">
+                                </div>
+                            </div>
+                            <input type="hidden" id="edit-NISSantri">
+                            <input type="hidden" id="edit-DetailAlumni">
+                        </div>
+                    </div>
+                    </div>
+                
+                    <!-- Pesan & Alamat -->
+                    <div class="space-y-5">
                         <div class="bg-white p-4 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-slate-200 transition-all">
                             <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 flex justify-between">
                                 <span>Pesan & Doa</span> <i class="far fa-comment-dots"></i>
@@ -255,9 +267,10 @@
                     </div>
                 </div>
 
-                <div class="px-8 py-5 border-t border-slate-100 bg-white flex justify-end gap-3 rounded-b-[2.5rem]">
-                    <button id="edit-modal-cancel" type="button" class="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95">Batal</button>
-                    <button id="edit-modal-save" type="submit" class="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                <!-- Footer - Sticky -->
+                <div class="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-3">
+                    <button id="edit-drawer-cancel" type="button" class="bg-white border border-slate-200 text-slate-600 px-6 py-2.5 rounded-xl font-bold hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95">Batal</button>
+                    <button id="edit-drawer-save" type="submit" class="bg-slate-900 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-orange-600 transition-all shadow-lg hover:shadow-orange-500/30 flex items-center gap-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span id="edit-save-text">Simpan Perubahan</span> 
                         <span id="edit-save-loading" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
                     </button>
