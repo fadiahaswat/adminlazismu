@@ -40,6 +40,9 @@ const auth = getAuth(app);
 // URL API GOOGLE SHEET (TETAP SAMA)
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
+// Konstanta untuk button HTML (untuk konsistensi)
+const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
+
 // --- FUNGSI LOGIN (PINTU MASUK) ---
 // Google Sign-In untuk admin yang terotorisasi
 document.getElementById('btn-login-google').addEventListener('click', async () => {
@@ -50,6 +53,7 @@ document.getElementById('btn-login-google').addEventListener('click', async () =
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     btn.disabled = true;
     errorMsg.classList.add('hidden');
+    errorMsg.classList.remove('flex');
 
     try {
         // Buat provider Google
@@ -65,7 +69,8 @@ document.getElementById('btn-login-google').addEventListener('click', async () =
             await signOut(auth);
             errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
             errorMsg.classList.remove('hidden');
-            btn.innerHTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
+            errorMsg.classList.add('flex');
+            btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
             btn.disabled = false;
             return;
         }
@@ -85,7 +90,8 @@ document.getElementById('btn-login-google').addEventListener('click', async () =
         
         errorMsg.textContent = errorMessage;
         errorMsg.classList.remove('hidden');
-        btn.innerHTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
+        errorMsg.classList.add('flex');
+        btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
         btn.disabled = false;
     }
 });
@@ -114,12 +120,14 @@ onAuthStateChanged(auth, (user) => {
             signOut(auth).then(() => {
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
                 overlay.classList.remove('hidden');
             }).catch((error) => {
                 console.error("Gagal logout");
                 // Tetap tampilkan pesan error meskipun logout gagal
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
                 overlay.classList.remove('hidden');
             });
             return;
