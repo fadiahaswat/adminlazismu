@@ -303,6 +303,31 @@
 
     <main class="container mx-auto px-4 md:px-8 py-8 space-y-8">
         
+        <!-- Personalized Greeting -->
+        <div id="greeting-container" class="bg-gradient-to-r from-orange-50 to-orange-100/50 rounded-2xl p-6 border border-orange-200/50 shadow-sm animate-enter">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h2 id="greeting-text" class="text-2xl font-black text-slate-800 mb-2">
+                        <span id="greeting-time">Selamat Datang</span>, <span id="greeting-name">Admin</span>! <span id="greeting-icon">👋</span>
+                    </h2>
+                    <p id="greeting-stats" class="text-sm text-slate-600 font-medium">
+                        <i class="fas fa-info-circle text-orange-500"></i>
+                        <span id="greeting-message">Memuat data...</span>
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="copy-table-btn" class="flex items-center gap-2 bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95" title="Copy tabel ke clipboard">
+                        <i class="fas fa-copy"></i>
+                        <span class="hidden sm:inline">Copy Table</span>
+                    </button>
+                    <button id="focus-mode-btn" class="flex items-center gap-2 bg-white text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95" title="Mode fokus">
+                        <i class="fas fa-expand"></i>
+                        <span class="hidden sm:inline">Focus</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <div id="admin-stats-container" class="animate-enter">
             <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
@@ -445,6 +470,32 @@
                         <button id="filter-reset-button" class="w-[46px] h-[46px] flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-xl hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all active:rotate-180 duration-500 shadow-sm" title="Reset Filter">
                             <i class="fas fa-undo"></i>
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Smart Date Presets -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5 pt-5 border-t border-slate-100 border-dashed">
+                    <div class="md:col-span-3">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-wider">
+                            <i class="fas fa-calendar-alt mr-1"></i> Filter Cepat Tanggal
+                        </label>
+                        <div class="flex flex-wrap gap-2">
+                            <button data-preset="today" class="date-preset-btn px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all active:scale-95">
+                                📅 Hari Ini
+                            </button>
+                            <button data-preset="yesterday" class="date-preset-btn px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all active:scale-95">
+                                ⏮️ Kemarin
+                            </button>
+                            <button data-preset="last7days" class="date-preset-btn px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all active:scale-95">
+                                📊 7 Hari Terakhir
+                            </button>
+                            <button data-preset="thismonth" class="date-preset-btn px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all active:scale-95">
+                                📆 Bulan Ini
+                            </button>
+                            <button data-preset="lastmonth" class="date-preset-btn px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-all active:scale-95">
+                                🗓️ Bulan Lalu
+                            </button>
+                        </div>
                     </div>
                 </div>
                 

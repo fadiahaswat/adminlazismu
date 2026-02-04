@@ -1264,3 +1264,351 @@ if (tableWrapperEl) {
         if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
     });
 }
+
+// === NEW FEATURES ===
+
+// === 1. PERSONALIZED GREETING ===
+function updateGreeting() {
+    const greetingTimeEl = safeGetElement('greeting-time');
+    const greetingNameEl = safeGetElement('greeting-name');
+    const greetingIconEl = safeGetElement('greeting-icon');
+    const greetingMessageEl = safeGetElement('greeting-message');
+    
+    if (!greetingTimeEl || !greetingNameEl || !greetingIconEl) return;
+    
+    const hour = new Date().getHours();
+    let greeting = "Selamat Datang";
+    let icon = "👋";
+    
+    if (hour >= 5 && hour < 11) {
+        greeting = "Selamat Pagi";
+        icon = "☀️";
+    } else if (hour >= 11 && hour < 15) {
+        greeting = "Selamat Siang";
+        icon = "🌤️";
+    } else if (hour >= 15 && hour < 18) {
+        greeting = "Selamat Sore";
+        icon = "🌅";
+    } else if (hour >= 18 && hour < 22) {
+        greeting = "Selamat Malam";
+        icon = "🌙";
+    } else {
+        greeting = "Selamat Lembur";
+        icon = "🌙";
+    }
+    
+    greetingTimeEl.textContent = greeting;
+    greetingIconEl.textContent = icon;
+    
+    // Get user name from Firebase auth
+    const user = auth.currentUser;
+    if (user && user.displayName) {
+        const firstName = user.displayName.split(' ')[0];
+        greetingNameEl.textContent = firstName;
+    } else if (user && user.email) {
+        const name = user.email.split('@')[0];
+        greetingNameEl.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+    }
+}
+
+function updateGreetingStats() {
+    const greetingMessageEl = safeGetElement('greeting-message');
+    if (!greetingMessageEl) return;
+    
+    const unverifiedCount = allDonationData.filter(row => 
+        (row.Status || "Belum Verifikasi") === "Belum Verifikasi"
+    ).length;
+    
+    const todayCount = allDonationData.filter(row => {
+        const rowDate = new Date(row.Timestamp);
+        const today = new Date();
+        return rowDate.toDateString() === today.toDateString();
+    }).length;
+    
+    let message = "";
+    if (unverifiedCount > 0) {
+        message = `Ada ${unverifiedCount} donasi baru yang belum diverifikasi`;
+        if (todayCount > 0) {
+            message += ` (${todayCount} masuk hari ini)`;
+        }
+    } else if (todayCount > 0) {
+        message = `${todayCount} donasi masuk hari ini, semua sudah terverifikasi! ✨`;
+    } else {
+        message = "Semua data sudah diverifikasi. Dashboard bersih! 🎉";
+    }
+    
+    greetingMessageEl.textContent = message;
+}
+
+// === 2. SMART DATE PRESETS ===
+function applyDatePreset(preset) {
+    const today = new Date();
+    let fromDate, toDate;
+    
+    switch(preset) {
+        case 'today':
+            fromDate = toDate = new Date(today);
+            break;
+        case 'yesterday':
+            fromDate = toDate = new Date(today.setDate(today.getDate() - 1));
+            break;
+        case 'last7days':
+            toDate = new Date();
+            fromDate = new Date(today.setDate(today.getDate() - 6));
+            break;
+        case 'thismonth':
+            fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            toDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            break;
+        case 'lastmonth':
+            fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            break;
+        default:
+            return;
+    }
+    
+    if (filterDateFromEl) {
+        filterDateFromEl.valueAsDate = fromDate;
+    }
+    if (filterDateToEl) {
+        filterDateToEl.valueAsDate = toDate;
+    }
+    
+    // Highlight active preset
+    document.querySelectorAll('.date-preset-btn').forEach(btn => {
+        if (btn.dataset.preset === preset) {
+            btn.classList.add('bg-orange-100', 'border-orange-400', 'text-orange-700', 'font-extrabold');
+            btn.classList.remove('bg-slate-50', 'border-slate-200', 'text-slate-600');
+        } else {
+            btn.classList.remove('bg-orange-100', 'border-orange-400', 'text-orange-700', 'font-extrabold');
+            btn.classList.add('bg-slate-50', 'border-slate-200', 'text-slate-600');
+        }
+    });
+    
+    applyFilters();
+}
+
+// === 3. COPY TABLE TO CLIPBOARD ===
+function copyTableToClipboard() {
+    const copyBtn = safeGetElement('copy-table-btn');
+    if (!copyBtn) return;
+    
+    // Store original content
+    const originalHTML = copyBtn.innerHTML;
+    copyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Copying...';
+    copyBtn.disabled = true;
+    
+    try {
+        // Get headers
+        const headers = ['Tanggal', 'Waktu', 'Nama Donatur', 'Jenis Donasi', 'Nominal', 'Metode', 'Status'];
+        
+        // Get data
+        const rows = filteredData.map(row => {
+            const date = new Date(row.Timestamp);
+            return [
+                date.toLocaleDateString('id-ID'),
+                date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                row.NamaDonatur || 'Hamba Allah',
+                row.JenisDonasi || '-',
+                formatter.format(parseFloat(row.Nominal) || 0),
+                row.MetodePembayaran || '-',
+                row.Status || 'Belum Verifikasi'
+            ];
+        });
+        
+        // Create TSV (Tab-Separated Values) for better Excel compatibility
+        const tsvContent = [
+            headers.join('\t'),
+            ...rows.map(row => row.join('\t'))
+        ].join('\n');
+        
+        // Copy to clipboard
+        navigator.clipboard.writeText(tsvContent).then(() => {
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            copyBtn.classList.add('bg-green-50', 'border-green-300', 'text-green-700');
+            
+            showAppAlert(`${filteredData.length} baris berhasil dicopy! Paste ke Excel/Sheets.`);
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+                copyBtn.disabled = false;
+                copyBtn.classList.remove('bg-green-50', 'border-green-300', 'text-green-700');
+            }, 2000);
+        }).catch(err => {
+            console.error('Copy failed:', err);
+            copyBtn.innerHTML = originalHTML;
+            copyBtn.disabled = false;
+            showAppAlert('Gagal copy. Coba lagi.', true);
+        });
+    } catch (error) {
+        copyBtn.innerHTML = originalHTML;
+        copyBtn.disabled = false;
+        showAppAlert('Gagal copy table.', true);
+    }
+}
+
+// === 4. FOCUS MODE ===
+let focusModeActive = false;
+
+function toggleFocusMode() {
+    focusModeActive = !focusModeActive;
+    const focusBtn = safeGetElement('focus-mode-btn');
+    
+    if (focusModeActive) {
+        // Hide elements
+        const elementsToHide = [
+            safeGetElement('greeting-container'),
+            safeGetElement('admin-stats-container'),
+            safeGetElement('charts-container'),
+            document.querySelector('header')
+        ];
+        
+        elementsToHide.forEach(el => {
+            if (el) {
+                el.style.display = 'none';
+            }
+        });
+        
+        // Add focus mode styling
+        document.body.classList.add('focus-mode');
+        if (focusBtn) {
+            focusBtn.innerHTML = '<i class="fas fa-compress"></i> <span class="hidden sm:inline">Exit Focus</span>';
+            focusBtn.classList.add('bg-orange-100', 'border-orange-300', 'text-orange-700');
+        }
+        
+        // Scroll to table
+        const adminContent = safeGetElement('admin-content');
+        if (adminContent) {
+            adminContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } else {
+        // Show elements
+        const elementsToShow = [
+            safeGetElement('greeting-container'),
+            safeGetElement('admin-stats-container'),
+            safeGetElement('charts-container'),
+            document.querySelector('header')
+        ];
+        
+        elementsToShow.forEach(el => {
+            if (el) {
+                el.style.display = '';
+            }
+        });
+        
+        // Remove focus mode styling
+        document.body.classList.remove('focus-mode');
+        if (focusBtn) {
+            focusBtn.innerHTML = '<i class="fas fa-expand"></i> <span class="hidden sm:inline">Focus</span>';
+            focusBtn.classList.remove('bg-orange-100', 'border-orange-300', 'text-orange-700');
+        }
+    }
+}
+
+// === 5. SESSION TIMEOUT WARNING ===
+let sessionTimeoutWarning;
+let sessionTimeout;
+let lastActivityTime = Date.now();
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const WARNING_TIME = 60 * 1000; // 60 seconds warning
+
+function resetSessionTimer() {
+    lastActivityTime = Date.now();
+    clearTimeout(sessionTimeoutWarning);
+    clearTimeout(sessionTimeout);
+    
+    // Set warning timer
+    sessionTimeoutWarning = setTimeout(() => {
+        showSessionWarning();
+    }, INACTIVITY_TIMEOUT - WARNING_TIME);
+}
+
+function showSessionWarning() {
+    let countdown = 60;
+    const warningDiv = document.createElement('div');
+    warningDiv.id = 'session-warning';
+    warningDiv.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4';
+    warningDiv.innerHTML = `
+        <div class="bg-white rounded-2xl p-8 max-w-md text-center shadow-2xl animate-enter">
+            <div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-exclamation-triangle text-4xl text-yellow-600"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-800 mb-2">Sesi Akan Berakhir</h3>
+            <p class="text-slate-600 mb-6">
+                Tidak ada aktivitas terdeteksi. Anda akan otomatis logout dalam <strong id="countdown-text" class="text-orange-600">60</strong> detik.
+            </p>
+            <button id="stay-logged-in-btn" class="w-full bg-orange-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-700 transition-all shadow-lg">
+                <i class="fas fa-clock mr-2"></i> Tetap Masuk
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(warningDiv);
+    
+    const countdownEl = safeGetElement('countdown-text');
+    const stayBtn = safeGetElement('stay-logged-in-btn');
+    
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdownEl) countdownEl.textContent = countdown;
+        
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            logout();
+        }
+    }, 1000);
+    
+    if (stayBtn) {
+        stayBtn.onclick = () => {
+            clearInterval(countdownInterval);
+            warningDiv.remove();
+            resetSessionTimer();
+        };
+    }
+    
+    // Auto-logout after warning time
+    sessionTimeout = setTimeout(() => {
+        clearInterval(countdownInterval);
+        logout();
+    }, WARNING_TIME);
+}
+
+// Track user activity
+['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, () => {
+        resetSessionTimer();
+    }, { passive: true });
+});
+
+// Initialize session timer
+resetSessionTimer();
+
+// === EVENT LISTENERS FOR NEW FEATURES ===
+
+// Date presets
+document.querySelectorAll('.date-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        applyDatePreset(btn.dataset.preset);
+    });
+});
+
+// Copy table button
+const copyTableBtn = safeGetElement('copy-table-btn');
+if (copyTableBtn) {
+    copyTableBtn.addEventListener('click', copyTableToClipboard);
+}
+
+// Focus mode button
+const focusModeBtn = safeGetElement('focus-mode-btn');
+if (focusModeBtn) {
+    focusModeBtn.addEventListener('click', toggleFocusMode);
+}
+
+// Update greeting on auth state change and after data loads
+const originalFetchData = fetchData;
+window.fetchData = async function() {
+    await originalFetchData();
+    updateGreeting();
+    updateGreetingStats();
+};

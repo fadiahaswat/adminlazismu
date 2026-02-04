@@ -94,3 +94,17 @@ button, a, input, select, textarea {
     outline: 2px solid #f97316;
     outline-offset: 2px;
 }
+
+/* Focus Mode Styling */
+body.focus-mode {
+    background-color: #1e293b;
+}
+
+body.focus-mode main {
+    max-width: 100%;
+    padding: 2rem;
+}
+
+body.focus-mode #admin-content {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
