@@ -7,12 +7,12 @@
     <!-- Security: Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://cdnjs.cloudflare.com https://script.google.com https://apis.google.com https://www.google.com https://www.recaptcha.net https://static.cloudflareinsights.com;
-    connect-src 'self' https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com https://script.google.com https://script.googleusercontent.com https://www.googleapis.com https://www.google.com https://www.recaptcha.net;
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://cdnjs.cloudflare.com https://script.google.com https://apis.google.com https://www.google.com https://accounts.google.com https://www.recaptcha.net https://static.cloudflareinsights.com;
+    connect-src 'self' https://www.gstatic.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com https://script.google.com https://script.googleusercontent.com https://www.googleapis.com https://www.google.com https://accounts.google.com https://www.recaptcha.net;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
     font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
-    img-src 'self' data: https://firebasestorage.googleapis.com;
-    frame-src https://lazismu-auth.firebaseapp.com https://www.google.com https://www.recaptcha.net;
+    img-src 'self' data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com;
+    frame-src https://lazismu-auth.firebaseapp.com https://www.google.com https://accounts.google.com https://www.recaptcha.net;
 ">
     
     <title>Admin Dashboard - Lazismu Mu'allimin</title>
@@ -102,24 +102,16 @@
             <h2 class="text-2xl font-extrabold text-slate-800 mb-2 tracking-tight">Admin Portal</h2>
             <p class="text-slate-400 mb-8 text-sm font-medium">Masuk untuk mengelola data Lazismu</p>
             
-            <div class="space-y-4">
-                <div class="relative group">
-                    <i class="fas fa-envelope absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
-                    <input type="email" id="admin-email" class="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-400" placeholder="Email Administrator">
-                </div>
-                
-                <div class="relative group">
-                    <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors"></i>
-                    <input type="password" id="admin-password" class="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 outline-none transition-all font-semibold text-slate-700 placeholder:text-slate-400" placeholder="Password">
-                </div>
-            </div>
-            
-            <p id="login-error" class="text-red-500 text-xs font-bold mt-4 bg-red-50 py-2 px-3 rounded-lg hidden flex items-center gap-2"><i class="fas fa-exclamation-circle"></i> <span></span></p>
+            <p id="login-error" class="text-red-500 text-xs font-bold mb-4 bg-red-50 py-2 px-3 rounded-lg hidden items-center gap-2"><i class="fas fa-exclamation-circle"></i> <span></span></p>
 
-            <button id="btn-login-firebase" class="w-full mt-8 bg-slate-900 hover:bg-orange-600 text-white font-bold py-4 rounded-xl transition-all shadow-xl shadow-slate-900/20 hover:shadow-orange-600/30 active:scale-[0.98] flex justify-center items-center gap-2 group">
-                <span>Masuk Dashboard</span>
-                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            <button id="btn-login-google" class="w-full bg-white hover:bg-gray-50 text-slate-700 font-bold py-4 px-6 rounded-xl transition-all shadow-lg border-2 border-slate-200 hover:border-slate-300 active:scale-[0.98] flex justify-center items-center gap-3 group">
+                <i class="fab fa-google text-xl text-red-500"></i>
+                <span>Masuk dengan Google</span>
             </button>
+            
+            <p class="text-xs text-slate-400 mt-6 leading-relaxed">
+                <i class="fas fa-info-circle text-orange-500"></i> Hanya admin terotorisasi yang dapat mengakses dashboard
+            </p>
         </div>
     </div>
 

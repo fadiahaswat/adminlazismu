@@ -1,6 +1,6 @@
 // --- IMPORT PERALATAN FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 // [BARU] Import App Check
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
@@ -19,8 +19,11 @@ const firebaseConfig = {
 
 // --- KONFIGURASI KEAMANAN ---
 // Email yang diizinkan untuk login ke admin dashboard
-const ALLOWED_ADMIN_EMAIL = "lazismumuallimin@gmail.com";
-const ALLOWED_ADMIN_EMAIL_LOWER = ALLOWED_ADMIN_EMAIL.toLowerCase();
+const ALLOWED_ADMIN_EMAILS = [
+    "lazismumuallimin@gmail.com",
+    "ad.lazismumuallimin@gmail.com"
+];
+const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
 
 // --- NYALAKAN APLIKASI ---
 const app = initializeApp(firebaseConfig);
@@ -37,38 +40,58 @@ const auth = getAuth(app);
 // URL API GOOGLE SHEET (TETAP SAMA)
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
+// Konstanta untuk button HTML (untuk konsistensi)
+const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
+
 // --- FUNGSI LOGIN (PINTU MASUK) ---
-// Kita pasang kuping di tombol login yang baru
-document.getElementById('btn-login-firebase').addEventListener('click', async () => {
-    const email = document.getElementById('admin-email').value;
-    const pass = document.getElementById('admin-password').value;
+// Google Sign-In untuk admin yang terotorisasi
+document.getElementById('btn-login-google').addEventListener('click', async () => {
     const errorMsg = document.getElementById('login-error');
-    const btn = document.getElementById('btn-login-firebase');
+    const btn = document.getElementById('btn-login-google');
 
     // Ubah tombol jadi loading
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     btn.disabled = true;
     errorMsg.classList.add('hidden');
-
-    // VALIDASI KEAMANAN: Cek apakah email yang dimasukkan adalah email admin yang diizinkan
-    if (email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
-        errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
-        errorMsg.classList.remove('hidden');
-        btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
-        btn.disabled = false;
-        return;
-    }
+    errorMsg.classList.remove('flex');
 
     try {
-        // Perintah ke Firebase: "Cek email password ini!"
-        await signInWithEmailAndPassword(auth, email, pass);
-        // Kalau berhasil, diam saja. Nanti 'Pengamat' di bawah yang bekerja otomatis.
+        // Buat provider Google
+        const provider = new GoogleAuthProvider();
+        
+        // Login dengan popup Google
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        // VALIDASI KEAMANAN: Cek apakah email yang login adalah email admin yang diizinkan
+        if (!ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
+            // Logout otomatis jika bukan admin yang diizinkan
+            await signOut(auth);
+            errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
+            errorMsg.classList.remove('hidden');
+            errorMsg.classList.add('flex');
+            btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
+            btn.disabled = false;
+            return;
+        }
+        
+        // Jika berhasil dan email diizinkan, nanti 'Pengamat' di bawah yang bekerja otomatis.
     } catch (error) {
         // Kalau gagal - Log error tanpa detail sensitif
         console.error("Login gagal");
-        errorMsg.textContent = "Email atau Password Salah!";
+        
+        // Handle error yang lebih spesifik
+        let errorMessage = "Gagal login dengan Google!";
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMessage = "Login dibatalkan. Silakan coba lagi.";
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMessage = "Popup diblokir browser. Izinkan popup untuk login.";
+        }
+        
+        errorMsg.textContent = errorMessage;
         errorMsg.classList.remove('hidden');
-        btn.innerHTML = '<span>Masuk Dashboard</span><i class="fas fa-arrow-right"></i>';
+        errorMsg.classList.add('flex');
+        btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
         btn.disabled = false;
     }
 });
@@ -91,18 +114,20 @@ onAuthStateChanged(auth, (user) => {
     
     if (user) {
         // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
-        if (user.email.toLowerCase().trim() !== ALLOWED_ADMIN_EMAIL_LOWER) {
+        if (!ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
             console.warn("Akses ditolak - email tidak sah");
             // Logout otomatis jika bukan admin yang diizinkan
             signOut(auth).then(() => {
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
                 overlay.classList.remove('hidden');
             }).catch((error) => {
                 console.error("Gagal logout");
                 // Tetap tampilkan pesan error meskipun logout gagal
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
                 overlay.classList.remove('hidden');
             });
             return;
