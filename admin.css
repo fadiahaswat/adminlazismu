@@ -5,6 +5,15 @@ body {
     background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
     background-size: 40px 40px;
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+}
+
+/* Better touch targets for mobile */
+@media (hover: none) and (pointer: coarse) {
+    button:not(input[type="text"]):not(input[type="number"]):not(input[type="email"]):not(input[type="tel"]):not(textarea):not(select), 
+    a:not(.inline) {
+        min-height: 44px;
+    }
 }
 
 /* Animasi Fade In Up */
@@ -14,6 +23,12 @@ body {
 }
 .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Animasi Pulse untuk Success Icons */
+@keyframes pulse-soft {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }
 
 /* Transisi Modal */
@@ -55,4 +70,41 @@ input[type=number]::-webkit-outer-spin-button {
 }
 input[type=number] { 
     -moz-appearance: textfield; 
+}
+
+/* Loading Skeleton Animation */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+    background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, select, textarea {
+    transition: all 0.2s ease;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+    outline: 2px solid #f97316;
+    outline-offset: 2px;
+}
+
+/* Focus Mode Styling */
+body.focus-mode {
+    background-color: #1e293b;
+}
+
+body.focus-mode main {
+    max-width: 100%;
+    padding: 2rem;
+}
+
+body.focus-mode #admin-content {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
