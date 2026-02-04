@@ -2,6 +2,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
+// [BARU] Import App Check
+import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
+
 // --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
 // PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
 // Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
@@ -19,8 +22,16 @@ const firebaseConfig = {
 const ALLOWED_ADMIN_EMAIL = "lazismumuallimin@gmail.com";
 const ALLOWED_ADMIN_EMAIL_LOWER = ALLOWED_ADMIN_EMAIL.toLowerCase();
 
-// --- NYALAKAN SATPAM ---
+// --- NYALAKAN APLIKASI ---
 const app = initializeApp(firebaseConfig);
+
+// [BARU] NYALAKAN APP CHECK (SATPAM RECAPTCHA)
+const appCheck = initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
+  isTokenAutoRefreshEnabled: true
+});
+
+// --- NYALAKAN AUTH ---
 const auth = getAuth(app);
 
 // URL API GOOGLE SHEET (TETAP SAMA)
