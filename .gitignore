@@ -1,0 +1,11 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build artifacts
+input.css
+tailwindcss-linux-x64
+
+# Temporary files
+.DS_Store
+*.log
