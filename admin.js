@@ -310,12 +310,31 @@ if (confirmOkBtn) confirmOkBtn.onclick = () => {
     hideModal(confirmModal); 
 };
 
-// ESC key to close modals
+// ESC key to close modals and keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+    // ESC to close modals
     if (e.key === 'Escape') {
         if (alertModal && !alertModal.classList.contains('hidden')) hideModal(alertModal);
         if (confirmModal && !confirmModal.classList.contains('hidden')) hideModal(confirmModal);
         if (editModal && !editModal.classList.contains('hidden')) hideModal(editModal);
+    }
+    
+    // Keyboard shortcuts (with Ctrl/Cmd key)
+    if (e.ctrlKey || e.metaKey) {
+        switch(e.key.toLowerCase()) {
+            case 'r': // Ctrl+R to refresh (prevent default page reload)
+                e.preventDefault();
+                if (refreshButton) refreshButton.click();
+                break;
+            case 'e': // Ctrl+E to export CSV
+                e.preventDefault();
+                if (exportCsvBtn) exportCsvBtn.click();
+                break;
+            case 'f': // Ctrl+F to focus search (prevent default browser search)
+                e.preventDefault();
+                if (filterSearchEl) filterSearchEl.focus();
+                break;
+        }
     }
 });
 
@@ -390,6 +409,8 @@ async function verifyDonation(rowNumber) {
 }
 
 function calculateStatistics(data) {
+    if (!statTotalEl || !statDonaturEl || !statHariIniEl || !statTertinggiEl || !statRataEl || !statTipeEl) return;
+    
     let total = 0;
     let count = data.length;
     let maxVal = 0;
@@ -422,12 +443,32 @@ function calculateStatistics(data) {
 
     const avgVal = count > 0 ? total / count : 0;
 
-    statTotalEl.textContent = formatter.format(total);
-    statDonaturEl.textContent = count;
-    statHariIniEl.textContent = formatter.format(todayTotal);
-    statTertinggiEl.textContent = formatter.format(maxVal);
-    statRataEl.textContent = formatter.format(avgVal);
+    // Animate number changes
+    animateValue(statTotalEl, statTotalEl.textContent, formatter.format(total), 500);
+    animateValue(statDonaturEl, statDonaturEl.textContent, count, 500);
+    animateValue(statHariIniEl, statHariIniEl.textContent, formatter.format(todayTotal), 500);
+    animateValue(statTertinggiEl, statTertinggiEl.textContent, formatter.format(maxVal), 500);
+    animateValue(statRataEl, statRataEl.textContent, formatter.format(avgVal), 500);
     statTipeEl.textContent = topType;
+}
+
+// Helper function to animate number changes
+function animateValue(element, start, end, duration) {
+    if (!element) return;
+    
+    // If the values are the same, just set it
+    if (start === end) {
+        element.textContent = end;
+        return;
+    }
+    
+    // Simple animation for better UX
+    element.style.transition = 'transform 0.3s ease';
+    element.style.transform = 'scale(1.1)';
+    setTimeout(() => {
+        element.textContent = end;
+        element.style.transform = 'scale(1)';
+    }, 150);
 }
 
 function renderTable() {
@@ -697,29 +738,57 @@ async function executeDelete(rowNumber) {
             method: 'POST',
             body: JSON.stringify({ action: "delete", row: rowNumber })
         });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
-        showAppAlert("Data berhasil dihapus."); fetchData();
+        
+        showAppAlert("Data berhasil dihapus."); 
+        fetchData();
     } catch (err) {
-        showAppAlert("Gagal menghapus: " + err.message, true);
+        showAppAlert("Gagal menghapus: " + (err.message || "Unknown error"), true);
     }
 }
 
 function exportToCSV() {
     if (filteredData.length === 0) return showAppAlert("Tidak ada data untuk diekspor", true);
-    const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa', 'Status'];
-    const csvRows = [keys.join(',')];
-    filteredData.forEach(row => {
-        const values = keys.map(key => {
-            let val = row[key] || ''; val = String(val).replace(/"/g, '""'); return `"${val}"`;
-        });
-        csvRows.push(values.join(','));
-    });
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.setAttribute('hidden', ''); a.setAttribute('href', url);
-    a.setAttribute('download', `rekap_donasi_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    
+    // Add visual feedback
+    if (exportCsvBtn) {
+        const originalText = exportCsvBtn.innerHTML;
+        exportCsvBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Mengekspor...</span>';
+        exportCsvBtn.disabled = true;
+        
+        setTimeout(() => {
+            const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa', 'Status'];
+            const csvRows = [keys.join(',')];
+            
+            filteredData.forEach(row => {
+                const values = keys.map(key => {
+                    let val = row[key] || ''; 
+                    val = String(val).replace(/"/g, '""'); 
+                    return `"${val}"`;
+                });
+                csvRows.push(values.join(','));
+            });
+            
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); 
+            a.setAttribute('hidden', ''); 
+            a.setAttribute('href', url);
+            a.setAttribute('download', `rekap_donasi_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url); // Clean up
+            
+            showAppAlert(`${filteredData.length} data berhasil diekspor!`);
+            exportCsvBtn.innerHTML = originalText;
+            exportCsvBtn.disabled = false;
+        }, 500);
+    }
 }
 
 // === NEW: LOGIC CETAK KUITANSI ===
@@ -743,108 +812,122 @@ function terbilang(nilai) {
 // Fungsi Utama Cetak Kuitansi (Hanya Download Lokal)
 async function handlePrintReceipt(rowNumber) {
     const data = allDonationData.find(r => r.row === rowNumber);
-    if (!data) return;
+    if (!data) {
+        showAppAlert("Data tidak ditemukan", true);
+        return;
+    }
 
     showAppAlert("Sedang membuat PDF...", false);
     
-    // 1. ISI DATA KE TEMPLATE (Mapping Data)
-    const dateObj = new Date(data.Timestamp);
-    const nominal = parseFloat(data.Nominal) || 0;
-    
-    // Format Tanggal (Pecah per digit untuk kotak-kotak)
-    const d = String(dateObj.getDate()).padStart(2, '0');
-    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const y = String(dateObj.getFullYear());
-
-    const terbilangEl = document.getElementById('rcpt-terbilang-1');
-    const terbilang2El = document.getElementById('rcpt-terbilang-2');
-
-    document.getElementById('rcpt-no').innerText = `KL-${data.row}`; // Contoh No Kuitansi
-    document.getElementById('rcpt-d1').innerText = d[0]; document.getElementById('rcpt-d2').innerText = d[1];
-    document.getElementById('rcpt-m1').innerText = m[0]; document.getElementById('rcpt-m2').innerText = m[1];
-    document.getElementById('rcpt-y1').innerText = y[2]; document.getElementById('rcpt-y2').innerText = y[3];
-
-    document.getElementById('rcpt-nama').innerText = data.NamaDonatur || 'Hamba Allah';
-    document.getElementById('rcpt-alamat').innerText = data.Alamat || '-';
-    document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
-    document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
-
-    // Clear All Nominal Fields
-    const nominalFields = ['zakat', 'infaq', 'lain'];
-    nominalFields.forEach(k => {
-        document.getElementById(`rcpt-jenis-${k}`).innerText = '';
-        document.getElementById(`rcpt-nom-${k}`).innerText = '';
-    });
-
-    // Logic Penempatan Nominal
-    const fmtNominal = formatter.format(nominal);
-    const jenis = (data.JenisDonasi || '').toLowerCase();
-    
-    // Cek Nominal (Hanya Rp 1.000.249)
-    // Nominal dicetak sekali saja di kolom yang relevan.
-    if(jenis.includes('zakat')) {
-        document.getElementById('rcpt-jenis-zakat').innerText = data.JenisDonasi;
-        document.getElementById('rcpt-nom-zakat').innerText = fmtNominal;
-    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) { // Menangkap 'Infaq/Shadaqah'ndidikan'
-        document.getElementById('rcpt-jenis-infaq').innerText = data.JenisDonasi;
-        document.getElementById('rcpt-nom-infaq').innerText = fmtNominal;
-    } else {
-        document.getElementById('rcpt-jenis-lain').innerText = data.JenisDonasi;
-        document.getElementById('rcpt-nom-lain').innerText = fmtNominal;
-    }
-    
-    // Nominal Total
-    document.getElementById('rcpt-total').innerText = fmtNominal;
-    
-    // Checkbox Logic
-    document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
-    document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
-    document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
-    document.getElementById('rcpt-chk-wesel').innerText = ''; // Clear Wesel
-
-    // Set Terbilang
-    const textTerbilang = terbilang(nominal) + " Rupiah";
-    terbilangEl.innerText = textTerbilang;
-    terbilang2El.innerText = ''; // Pastikan baris kedua kosong secara default
-    
-    // Penyesuaian Font Size jika Terlalu Panjang (Pencegahan Overflow)
-    // Jika lebih dari 50 karakter, kecilkan font
-    terbilangEl.style.fontSize = '14pt'; 
-    if (textTerbilang.length > 50) {
-        terbilangEl.style.fontSize = '12pt';
-    }
-    if (textTerbilang.length > 65) {
-        terbilangEl.style.fontSize = '10pt';
-    }
-
-
-    // 2. GENERATE PDF & DOWNLOAD LOKAL
-    const element = document.getElementById('receipt-content');
-    const opt = {
-        margin: 0,
-        filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
-        html2canvas: { scale: 3, useCORS: true }, 
-        jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
-    };
-
     try {
+        // 1. ISI DATA KE TEMPLATE (Mapping Data)
+        const dateObj = new Date(data.Timestamp);
+        const nominal = parseFloat(data.Nominal) || 0;
+        
+        // Format Tanggal (Pecah per digit untuk kotak-kotak)
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const y = String(dateObj.getFullYear());
+
+        const terbilangEl = safeGetElement('rcpt-terbilang-1');
+        const terbilang2El = safeGetElement('rcpt-terbilang-2');
+        const element = safeGetElement('receipt-content');
+        
+        if (!terbilangEl || !terbilang2El || !element) {
+            throw new Error("Template kuitansi tidak ditemukan");
+        }
+
+        // Safe element updates with null checks
+        const setElementText = (id, text) => {
+            const el = safeGetElement(id);
+            if (el) el.innerText = text || '';
+        };
+
+        setElementText('rcpt-no', `KL-${data.row}`);
+        setElementText('rcpt-d1', d[0]);
+        setElementText('rcpt-d2', d[1]);
+        setElementText('rcpt-m1', m[0]);
+        setElementText('rcpt-m2', m[1]);
+        setElementText('rcpt-y1', y[2]);
+        setElementText('rcpt-y2', y[3]);
+        setElementText('rcpt-nama', data.NamaDonatur || 'Hamba Allah');
+        setElementText('rcpt-alamat', data.Alamat || '-');
+        setElementText('rcpt-hp', data.NoHP || '-');
+        setElementText('rcpt-penyetor', data.NamaDonatur || '');
+
+        // Clear All Nominal Fields
+        const nominalFields = ['zakat', 'infaq', 'lain'];
+        nominalFields.forEach(k => {
+            setElementText(`rcpt-jenis-${k}`, '');
+            setElementText(`rcpt-nom-${k}`, '');
+        });
+
+        // Logic Penempatan Nominal
+        const fmtNominal = formatter.format(nominal);
+        const jenis = (data.JenisDonasi || '').toLowerCase();
+        
+        // Nominal dicetak sekali saja di kolom yang relevan.
+        if(jenis.includes('zakat')) {
+            setElementText('rcpt-jenis-zakat', data.JenisDonasi);
+            setElementText('rcpt-nom-zakat', fmtNominal);
+        } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) {
+            setElementText('rcpt-jenis-infaq', data.JenisDonasi);
+            setElementText('rcpt-nom-infaq', fmtNominal);
+        } else {
+            setElementText('rcpt-jenis-lain', data.JenisDonasi);
+            setElementText('rcpt-nom-lain', fmtNominal);
+        }
+        
+        // Nominal Total
+        setElementText('rcpt-total', fmtNominal);
+        
+        // Checkbox Logic
+        setElementText('rcpt-chk-kas', data.MetodePembayaran === 'Tunai' ? 'V' : '');
+        setElementText('rcpt-chk-bank', data.MetodePembayaran !== 'Tunai' ? 'V' : '');
+        setElementText('rcpt-nama-bank', data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '');
+        setElementText('rcpt-chk-wesel', '');
+
+        // Set Terbilang
+        const textTerbilang = terbilang(nominal) + " Rupiah";
+        terbilangEl.innerText = textTerbilang;
+        terbilang2El.innerText = '';
+        
+        // Penyesuaian Font Size jika Terlalu Panjang
+        terbilangEl.style.fontSize = '14pt'; 
+        if (textTerbilang.length > 50) {
+            terbilangEl.style.fontSize = '12pt';
+        }
+        if (textTerbilang.length > 65) {
+            terbilangEl.style.fontSize = '10pt';
+        }
+
+        // 2. GENERATE PDF & DOWNLOAD LOKAL
+        const safeName = (data.NamaDonatur || 'Donatur').replace(/[^a-zA-Z0-9]/g, '_');
+        const opt = {
+            margin: 0,
+            filename: `Kuitansi_Lazismu_${data.row}_${safeName}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 3, useCORS: true }, 
+            jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
+        };
+
         await html2pdf().set(opt).from(element).save();
         
-        // Panggil server (Server hanya merespons success/error tanpa kirim email)
+        // Panggil server (hanya untuk logging)
         await fetch(GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({ action: "sendReceipt" })
         });
         
-        showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh! Silakan cek folder Download Anda.`, false);
+        showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh!`, false);
 
     } catch (err) {
-        showAppAlert("Gagal Generate PDF: " + err.message, true);
+        console.error("PDF generation error:", err);
+        showAppAlert("Gagal Generate PDF: " + (err.message || "Unknown error"), true);
     } finally {
-        // Reset font size setelah selesai
-        terbilangEl.style.fontSize = '14pt';
+        // Reset font size
+        const terbilangEl = safeGetElement('rcpt-terbilang-1');
+        if (terbilangEl) terbilangEl.style.fontSize = '14pt';
     }
 }
 
