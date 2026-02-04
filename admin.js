@@ -30,10 +30,16 @@ const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLow
 const app = initializeApp(firebaseConfig);
 
 // [BARU] NYALAKAN APP CHECK (SATPAM RECAPTCHA)
-const appCheck = initializeAppCheck(app, {
-  provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
-  isTokenAutoRefreshEnabled: true
-});
+let appCheck;
+try {
+  appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (error) {
+  console.warn("App Check initialization failed - continuing without App Check");
+  // App Check gagal, tapi aplikasi tetap bisa jalan (optional security layer)
+}
 
 // --- NYALAKAN AUTH ---
 const auth = getAuth(app);
@@ -283,8 +289,18 @@ async function fetchData() {
         applyFilters();
 
     } catch (error) {
-        console.error(error);
-        showAppAlert("Gagal memuat data: " + error.message, true);
+        console.error("Fetch error:", error);
+        // Gunakan pesan error yang user-friendly, jangan expose raw error
+        let errorMessage = "Tidak dapat memuat data. Periksa koneksi internet Anda.";
+        
+        // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
+        if (error.message && 
+            !error.message.includes("6Le") && // ReCaptcha sitekey
+            !error.message.includes("://") && // URLs/endpoints (protocol separator)
+            error.message.length < 100) { // Hindari pesan error yang terlalu panjang
+            errorMessage = "Gagal memuat data: " + error.message;
+        }
+        showAppAlert(errorMessage, true);
     } finally {
         loadingEl.classList.add('hidden');
         refreshIcon.classList.remove('fa-spin');
@@ -305,7 +321,18 @@ async function verifyDonation(rowNumber) {
             showAppAlert("Donasi berhasil diverifikasi!");
             fetchData(); // Reload data
         } catch (error) {
-            showAppAlert("Gagal verifikasi: " + error.message, true);
+            console.error("Verification error:", error);
+            // Gunakan pesan error yang user-friendly, jangan expose raw error
+            let errorMessage = "Gagal memverifikasi. Coba lagi nanti.";
+            
+            // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
+            if (error.message && 
+                !error.message.includes("6Le") && // ReCaptcha sitekey
+                !error.message.includes("://") && // URLs/endpoints (protocol separator)
+                error.message.length < 100) { // Hindari pesan error yang terlalu panjang
+                errorMessage = "Gagal verifikasi: " + error.message;
+            }
+            showAppAlert(errorMessage, true);
         }
     });
 }
