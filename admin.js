@@ -226,6 +226,11 @@ let currentPage = 1;
 let rowsPerPage = 50;
 let confirmCallback = null;
 
+// Chart instances
+let trendChart = null;
+let paymentChart = null;
+let donationTypeChart = null;
+
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -476,6 +481,278 @@ function animateValue(element, start, end, duration) {
     }, 150);
 }
 
+// === CHARTS RENDERING ===
+
+function renderTrendChart(data) {
+    // Prepare data for last 30 days
+    const last30Days = [];
+    const today = new Date();
+    
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        date.setHours(0, 0, 0, 0);
+        last30Days.push({
+            date: date,
+            dateStr: date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+            total: 0
+        });
+    }
+    
+    // Aggregate data by date
+    data.forEach(row => {
+        const rowDate = new Date(row.Timestamp);
+        rowDate.setHours(0, 0, 0, 0);
+        
+        const dayData = last30Days.find(d => d.date.getTime() === rowDate.getTime());
+        if (dayData) {
+            dayData.total += parseFloat(row.Nominal) || 0;
+        }
+    });
+    
+    const categories = last30Days.map(d => d.dateStr);
+    const series = last30Days.map(d => d.total);
+    
+    const options = {
+        series: [{
+            name: 'Total Donasi',
+            data: series
+        }],
+        chart: {
+            type: 'area',
+            height: 280,
+            toolbar: { show: false },
+            zoom: { enabled: false },
+            fontFamily: 'Plus Jakarta Sans, sans-serif'
+        },
+        colors: ['#f97316'],
+        dataLabels: { enabled: false },
+        stroke: {
+            curve: 'smooth',
+            width: 3
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.4,
+                opacityTo: 0.1,
+                stops: [0, 90, 100]
+            }
+        },
+        xaxis: {
+            categories: categories,
+            labels: {
+                rotate: -45,
+                rotateAlways: true,
+                style: {
+                    fontSize: '10px',
+                    colors: '#94a3b8'
+                }
+            },
+            axisBorder: { show: false },
+            axisTicks: { show: false }
+        },
+        yaxis: {
+            labels: {
+                formatter: function (value) {
+                    return 'Rp ' + (value / 1000).toFixed(0) + 'k';
+                },
+                style: {
+                    colors: '#94a3b8',
+                    fontSize: '11px'
+                }
+            }
+        },
+        grid: {
+            borderColor: '#f1f5f9',
+            strokeDashArray: 4
+        },
+        tooltip: {
+            y: {
+                formatter: function (value) {
+                    return formatter.format(value);
+                }
+            }
+        }
+    };
+    
+    if (trendChart) {
+        trendChart.updateOptions(options);
+    } else {
+        trendChart = new ApexCharts(document.getElementById('trend-chart'), options);
+        trendChart.render();
+    }
+}
+
+function renderPaymentChart(data) {
+    const paymentCounts = {};
+    
+    data.forEach(row => {
+        const method = row.MetodePembayaran || 'Lainnya';
+        paymentCounts[method] = (paymentCounts[method] || 0) + 1;
+    });
+    
+    const labels = Object.keys(paymentCounts);
+    const series = Object.values(paymentCounts);
+    
+    const options = {
+        series: series,
+        chart: {
+            type: 'donut',
+            height: 200,
+            fontFamily: 'Plus Jakarta Sans, sans-serif'
+        },
+        labels: labels,
+        colors: ['#10b981', '#3b82f6', '#f59e0b'],
+        legend: {
+            position: 'bottom',
+            fontSize: '11px',
+            labels: {
+                colors: '#64748b'
+            }
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: function (val) {
+                return val.toFixed(0) + '%';
+            },
+            style: {
+                fontSize: '11px',
+                fontWeight: 'bold'
+            }
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        name: {
+                            show: true,
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: '#1e293b'
+                        },
+                        value: {
+                            show: true,
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            color: '#f97316',
+                            formatter: function (val) {
+                                return val;
+                            }
+                        },
+                        total: {
+                            show: true,
+                            label: 'Total',
+                            fontSize: '12px',
+                            color: '#64748b',
+                            formatter: function (w) {
+                                return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
+    if (paymentChart) {
+        paymentChart.updateOptions(options);
+    } else {
+        paymentChart = new ApexCharts(document.getElementById('payment-chart'), options);
+        paymentChart.render();
+    }
+}
+
+function renderDonationTypeChart(data) {
+    const typeCounts = {};
+    
+    data.forEach(row => {
+        const type = row.JenisDonasi || 'Lainnya';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+    
+    const labels = Object.keys(typeCounts);
+    const series = Object.values(typeCounts);
+    
+    const options = {
+        series: series,
+        chart: {
+            type: 'donut',
+            height: 200,
+            fontFamily: 'Plus Jakarta Sans, sans-serif'
+        },
+        labels: labels,
+        colors: ['#f97316', '#06b6d4', '#8b5cf6', '#ec4899', '#14b8a6'],
+        legend: {
+            position: 'bottom',
+            fontSize: '11px',
+            labels: {
+                colors: '#64748b'
+            }
+        },
+        dataLabels: {
+            enabled: true,
+            formatter: function (val) {
+                return val.toFixed(0) + '%';
+            },
+            style: {
+                fontSize: '11px',
+                fontWeight: 'bold'
+            }
+        },
+        plotOptions: {
+            pie: {
+                donut: {
+                    size: '70%',
+                    labels: {
+                        show: true,
+                        name: {
+                            show: true,
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            color: '#1e293b'
+                        },
+                        value: {
+                            show: true,
+                            fontSize: '20px',
+                            fontWeight: 'bold',
+                            color: '#f97316',
+                            formatter: function (val) {
+                                return val;
+                            }
+                        },
+                        total: {
+                            show: true,
+                            label: 'Total',
+                            fontSize: '12px',
+                            color: '#64748b',
+                            formatter: function (w) {
+                                return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
+    if (donationTypeChart) {
+        donationTypeChart.updateOptions(options);
+    } else {
+        donationTypeChart = new ApexCharts(document.getElementById('donation-type-chart'), options);
+        donationTypeChart.render();
+    }
+}
+
+function renderAllCharts(data) {
+    renderTrendChart(data);
+    renderPaymentChart(data);
+    renderDonationTypeChart(data);
+}
+
 function renderTable() {
     if (!paginationRowsEl || !tableBodyEl || !tableWrapperEl || !paginationInfoEl || !paginationPrevBtn || !paginationNextBtn) return;
     
@@ -656,6 +933,7 @@ function applyFilters() {
     });
 
     calculateStatistics(filteredData);
+    renderAllCharts(filteredData); // Update charts with filtered data
     currentPage = 1; // Reset to first page when filters change
     renderTable();
 }
