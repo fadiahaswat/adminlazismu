@@ -519,7 +519,7 @@ function applyFilters() {
         if (status && rowStatus !== status) return false;
 
         if (search) {
-            const str = `${row.NamaDonatur} ${row.NISSantri} ${row.NoHP} ${row.Email} ${row.NamaSantri}`.toLowerCase();
+            const str = `${row.NamaDonatur || ''} ${row.NISSantri || ''} ${row.NoHP || ''} ${row.Email || ''} ${row.NamaSantri || ''}`.toLowerCase();
             if (!str.includes(search)) return false;
         }
         return true;
