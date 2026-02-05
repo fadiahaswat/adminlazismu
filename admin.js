@@ -280,7 +280,20 @@ async function fetchData() {
     refreshIcon.classList.add('fa-spin');
 
     try {
-        const response = await fetch(GAS_API_URL);
+        // Ambil user dan token untuk autentikasi
+        const user = auth.currentUser;
+        if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
+        
+        const token = await user.getIdToken();
+        
+        // Kirim request dengan token autentikasi
+        const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "fetch",
+                authToken: token
+            })
+        });
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
