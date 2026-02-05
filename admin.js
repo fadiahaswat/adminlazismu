@@ -709,7 +709,7 @@ async function handlePrintReceipt(rowNumber) {
         filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
-        html2canvas: { scale: 3, useCORS: true }, 
+        html2canvas: { scale: 2, useCORS: true }, // Scale 2 sudah cukup tajam & lebih ringan
         jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
     };
 
