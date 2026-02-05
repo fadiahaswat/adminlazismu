@@ -308,31 +308,31 @@ async function fetchData() {
 }
 
 async function verifyDonation(rowNumber) {
-    // Tampilkan modal konfirmasi custom
     showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
         try {
+            // 1. Ambil User & Token
+            const user = auth.currentUser;
+            if (!user) throw new Error("Sesi habis, silakan login ulang.");
+            const token = await user.getIdToken(); // <--- INI KUNCINYA
+
+            // 2. Kirim ke Backend dengan Token
             const response = await fetch(GAS_API_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: "verify", row: rowNumber })
+                body: JSON.stringify({ 
+                    action: "verify", 
+                    row: rowNumber,
+                    authToken: token // <--- Token diselipkan di sini
+                })
             });
+            
             const res = await response.json();
             if(res.status !== 'success') throw new Error(res.message);
             
             showAppAlert("Donasi berhasil diverifikasi!");
-            fetchData(); // Reload data
+            fetchData(); 
         } catch (error) {
             console.error("Verification error:", error);
-            // Gunakan pesan error yang user-friendly, jangan expose raw error
-            let errorMessage = "Gagal memverifikasi. Coba lagi nanti.";
-            
-            // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
-            if (error.message && 
-                !error.message.includes("6Le") && // ReCaptcha sitekey
-                !error.message.includes("://") && // URLs/endpoints (protocol separator)
-                error.message.length < 100) { // Hindari pesan error yang terlalu panjang
-                errorMessage = "Gagal verifikasi: " + error.message;
-            }
-            showAppAlert(errorMessage, true);
+            showAppAlert("Gagal verifikasi: " + error.message, true);
         }
     });
 }
