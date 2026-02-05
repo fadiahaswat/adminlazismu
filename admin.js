@@ -9,7 +9,7 @@ import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com
 // PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
 // Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
 const firebaseConfig = {
-  apiKey: "AIzaSyCJm5bZw95IKRSVVZTC9iWkLdYeK-DvQPU",
+  apiKey: "AIzaSyBH6--Yq7y3101dSVR9A9yF-ytEA4rkpuU",
   authDomain: "lazismu-auth.firebaseapp.com",
   projectId: "lazismu-auth",
   storageBucket: "lazismu-auth.firebasestorage.app",
