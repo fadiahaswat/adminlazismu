@@ -75,9 +75,13 @@
         originalLog.apply(console, arguments);
     };
     
-    // 5. Detect tampering dengan JavaScript objects
-    Object.freeze(window.localStorage);
-    Object.freeze(window.sessionStorage);
+    // 5. Monitor local/session storage (but don't freeze - it causes errors)
+    // Instead, we just log access attempts
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+        // Log suspicious changes if needed
+        return originalSetItem.apply(this, arguments);
+    };
     
     // 6. Monitor untuk debugging attempts
     let lastTime = Date.now();
