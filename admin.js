@@ -761,11 +761,20 @@ async function handlePrintReceipt(rowNumber) {
     try {
         await html2pdf().set(opt).from(element).save();
         
-        // Panggil server (Server hanya merespons success/error tanpa kirim email)
-        await fetch(GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: "sendReceipt" })
-        });
+        // --- PERBAIKAN: Ambil Token sebelum lapor ke server ---
+        const user = auth.currentUser;
+        if (user) {
+            const token = await user.getIdToken(); // Ambil token
+            
+            // Panggil server dengan membawa Token
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "sendReceipt",
+                    authToken: token // <--- Token wajib disertakan!
+                })
+            });
+        }
         
         showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh! Silakan cek folder Download Anda.`, false);
 
