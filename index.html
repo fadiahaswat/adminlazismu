@@ -4,12 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Security Headers -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff">
-    <meta http-equiv="X-Frame-Options" content="DENY">
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    
     <!-- Security: Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
@@ -19,10 +13,6 @@
     font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
     img-src 'self' data: https://firebasestorage.googleapis.com https://lh3.googleusercontent.com;
     frame-src https://lazismu-auth.firebaseapp.com https://www.google.com https://accounts.google.com https://www.recaptcha.net;
-    base-uri 'self';
-    form-action 'self' https://script.google.com;
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
 ">
     
     <title>Admin Dashboard - Lazismu Mu'allimin</title>
@@ -529,10 +519,6 @@
         </div>
     </div>
 
-    <!-- Security Layer - JANGAN HAPUS! -->
-    <script src="security.js"></script>
-    
-    <!-- Main Application -->
     <script type="module" src="admin.js"></script>
 </body>
 </html>
