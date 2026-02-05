@@ -268,9 +268,13 @@ async function fetchData() {
     refreshIcon.classList.add('fa-spin');
 
     try {
-        // Kirim action 'getAllAdmin' DAN 'apiKey' untuk autentikasi backend
-        const url = `${GAS_API_URL}?action=getAllAdmin&apiKey=${GAS_ADMIN_KEY}`;
-        const response = await fetch(url);
+        // Kirim action 'getAllAdmin' dengan apiKey di header untuk keamanan
+        const url = `${GAS_API_URL}?action=getAllAdmin`;
+        const response = await fetch(url, {
+            headers: {
+                'X-API-Key': GAS_ADMIN_KEY
+            }
+        });
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         

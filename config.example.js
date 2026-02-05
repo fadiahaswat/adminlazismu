@@ -17,7 +17,8 @@ export const GAS_API_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
 
 // API Key untuk autentikasi backend
 // Harus SAMA PERSIS dengan 'ADMIN_API_KEY' di file code.gs backend
-export const GAS_ADMIN_KEY = "Lazismu_2026_Secure_Key_#99";
+// GANTI dengan kunci rahasia Anda sendiri (contoh: "MySecureKey_2026_#123")
+export const GAS_ADMIN_KEY = "YOUR_ADMIN_API_KEY_HERE";
 
 export const ALLOWED_ADMIN_EMAILS = [
     "admin1@example.com",
