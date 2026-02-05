@@ -550,28 +550,60 @@ async function handleEditSubmit(e) {
     const btn = document.getElementById('edit-modal-save');
     const txt = document.getElementById('edit-save-text');
     const load = document.getElementById('edit-save-loading');
-    btn.disabled = true; txt.classList.add('hidden'); load.classList.remove('hidden');
+    
+    // Aktifkan status loading pada tombol
+    btn.disabled = true; 
+    txt.classList.add('hidden'); 
+    load.classList.remove('hidden');
 
     const rowNumber = document.getElementById('edit-row-number').value;
     const payload = {};
     const inputs = editForm.querySelectorAll('input, select, textarea');
+    
+    // Mengumpulkan data dari form modal edit
     inputs.forEach(input => {
         const key = input.id.replace('edit-', '');
         if (key && key !== 'row-number') payload[key] = input.value;
     });
 
     try {
+        // --- PERBAIKAN UTAMA: AMBIL TOKEN DARI FIREBASE ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
+        
+        // Mengambil Token ID (KTP Digital) untuk dikirim ke GAS
+        const token = await user.getIdToken();
+
+        // Kirim data ke Google Apps Script API
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "update", row: rowNumber, payload: payload })
+            body: JSON.stringify({ 
+                action: "update", 
+                row: rowNumber, 
+                payload: payload,
+                authToken: token // WAJIB disertakan agar tidak ditolak oleh GAS
+            })
         });
+
         const res = await response.json();
-        if(res.status !== 'success') throw new Error(res.message);
-        hideModal(editModal); showAppAlert("Data berhasil diperbarui!"); fetchData();
+        
+        if(res.status !== 'success') {
+            throw new Error(res.message);
+        }
+        
+        // Jika berhasil
+        hideModal(editModal);
+        showAppAlert("Data berhasil diperbarui!");
+        fetchData(); // Refresh tabel agar data terbaru muncul
+
     } catch (err) {
+        console.error("Edit error:", err);
         showAppAlert("Gagal menyimpan: " + err.message, true);
     } finally {
-        btn.disabled = false; txt.classList.remove('hidden'); load.classList.add('hidden');
+        // Kembalikan status tombol ke normal
+        btn.disabled = false; 
+        txt.classList.remove('hidden'); 
+        load.classList.add('hidden');
     }
 }
 
