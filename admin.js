@@ -577,13 +577,29 @@ async function handleEditSubmit(e) {
 
 async function executeDelete(rowNumber) {
     try {
+        // 1. Ambil user yang sedang login
+        const user = auth.currentUser;
+        if (!user) throw new Error("Anda belum login!");
+
+        // 2. Minta Token (KTP Digital) dari Firebase
+        const token = await user.getIdToken();
+
+        // 3. Kirim ke Google Sheet beserta Tokennya
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "delete", row: rowNumber })
+            // Kita kirim token lewat payload agar mudah dibaca di GAS
+            body: JSON.stringify({ 
+                action: "delete", 
+                row: rowNumber,
+                authToken: token // <--- INI KUNCINYA
+            })
         });
+
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
-        showAppAlert("Data berhasil dihapus."); fetchData();
+        
+        showAppAlert("Data berhasil dihapus."); 
+        fetchData();
     } catch (err) {
         showAppAlert("Gagal menghapus: " + err.message, true);
     }
