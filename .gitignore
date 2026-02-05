@@ -9,3 +9,9 @@ tailwindcss-linux-x64
 # Temporary files
 .DS_Store
 *.log
+
+# Configuration files with sensitive data
+config.js
+.env
+.env.local
+*.env
