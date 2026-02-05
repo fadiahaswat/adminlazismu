@@ -609,37 +609,27 @@ async function handleEditSubmit(e) {
 
 async function executeDelete(rowNumber) {
     try {
-        // 1. Cek apakah user sedang login di Firebase
         const user = auth.currentUser;
-        if (!user) {
-            throw new Error("Sesi login Anda telah berakhir. Silakan login kembali.");
-        }
+        if (!user) throw new Error("Silakan login kembali.");
 
-        // 2. Ambil ID Token (KTP Digital) terbaru dari Firebase
-        const token = await user.getIdToken();
+        // Ambil token terbaru
+        const token = await user.getIdToken(true); 
 
-        // 3. Kirim permintaan ke Google Apps Script (GAS)
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({ 
                 action: "delete", 
                 row: rowNumber,
-                authToken: token // Tambahkan token ini agar lolos verifikasi di GAS
+                authToken: token 
             })
         });
 
         const res = await response.json();
-        
-        // 4. Tangani respon dari server
-        if (res.status !== 'success') {
-            throw new Error(res.message);
-        }
+        if (res.status !== 'success') throw new Error(res.message);
         
         showAppAlert("Data berhasil dihapus."); 
-        fetchData(); // Muat ulang data tabel
-
+        fetchData();
     } catch (err) {
-        console.error("Delete error:", err);
         showAppAlert("Gagal menghapus: " + err.message, true);
     }
 }
