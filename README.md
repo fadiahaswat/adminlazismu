@@ -2,6 +2,49 @@
 
 Dashboard administrasi untuk mengelola data donasi LAZISMU dengan autentikasi Firebase dan integrasi Google Sheets.
 
+## 🏗️ Arsitektur Sistem
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Admin Dashboard (Browser)                   │
+│                           admin.js + index.html                  │
+│                                                                   │
+│  1. User Login → Firebase Authentication (Google Sign-In)        │
+│  2. Get Firebase ID Token                                        │
+│  3. Send Token to Backend for CRUD operations                    │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+                              │ HTTPS + ID Token
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│              Google Apps Script Backend (Code.gs)                │
+│                                                                   │
+│  1. Verify Firebase ID Token via Google OAuth2 API              │
+│  2. Check if email is in ALLOWED_ADMIN_EMAILS                   │
+│  3. Execute operation if authorized                              │
+│  4. Return success/error response                                │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+                              │ Google Apps Script API
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    Google Sheets (Database)                      │
+│                                                                   │
+│  - Store donation data                                           │
+│  - CRUD operations via Apps Script                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Authentication Flow:**
+1. 👤 User clicks "Login dengan Google"
+2. 🔐 Firebase Authentication handles Google OAuth
+3. ✅ Frontend validates email against `ALLOWED_ADMIN_EMAILS`
+4. 🎟️ User gets Firebase ID Token (valid for 1 hour)
+5. 📤 Every backend request includes ID Token
+6. 🔍 Backend verifies token and email
+7. ✅ Operation executed if authorized
+8. ❌ "AKSES DITOLAK" error if token/email invalid
+
 ## 🚀 Fitur
 
 - ✅ Autentikasi Google dengan Firebase
@@ -121,16 +164,30 @@ Sistem ini menggunakan Firebase ID Token untuk autentikasi:
 
 ## 🐛 Troubleshooting
 
-### Error: "AKSES DITOLAK: Sesi tidak valid atau Anda bukan admin"
+### ⚠️ Error: "AKSES DITOLAK: Sesi tidak valid atau Anda bukan admin"
 
-**Penyebab dan Solusi:**
+**Ini adalah masalah paling umum!** Error ini muncul ketika:
+- Backend Google Apps Script belum di-deploy, atau
+- Konfigurasi email admin tidak cocok antara frontend dan backend
 
-1. **Email tidak sama antara frontend dan backend**
-   - ✅ Pastikan `ALLOWED_ADMIN_EMAILS` di `admin.js` dan `Code.gs` identik
+**📖 Panduan Lengkap:**
+- **Quick Fix**: Lihat `QUICKFIX.md` untuk solusi cepat 3 langkah
+- **Detailed Guide**: Lihat `TROUBLESHOOTING.md` untuk panduan detail
+- **Deployment Checklist**: Lihat `DEPLOYMENT-CHECKLIST.md` untuk checklist lengkap
+
+**Penyebab dan Solusi Cepat:**
+
+1. **Backend belum di-deploy**
+   - ✅ Deploy `Code.gs` ke Google Apps Script
+   - ✅ Update `GAS_API_URL` di admin.js dengan URL deployment
+   - ✅ Lihat `QUICKFIX.md` untuk step-by-step
+
+2. **Email tidak sama antara frontend dan backend**
+   - ✅ Pastikan `ALLOWED_ADMIN_EMAILS` di `admin.js` (line 22-26) dan `Code.gs` (line 14-18) identik
    - ✅ Perhatikan case-sensitive (gunakan lowercase)
    - ✅ Pastikan tidak ada spasi di awal/akhir email
 
-2. **Token Firebase tidak valid**
+3. **Token Firebase tidak valid**
    - ✅ Logout dan login ulang
    - ✅ Clear browser cache dan cookies
    - ✅ Periksa Firebase Console apakah user sudah ter-authenticate
