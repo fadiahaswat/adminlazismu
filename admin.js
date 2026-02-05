@@ -11,7 +11,8 @@ import {
     firebaseConfig, 
     RECAPTCHA_SITE_KEY, 
     GAS_API_URL, 
-    ALLOWED_ADMIN_EMAILS 
+    ALLOWED_ADMIN_EMAILS,
+    GAS_ADMIN_KEY
 } from './config.js';
 
 const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
@@ -267,7 +268,9 @@ async function fetchData() {
     refreshIcon.classList.add('fa-spin');
 
     try {
-        const response = await fetch(GAS_API_URL);
+        // Kirim action 'getAllAdmin' DAN 'apiKey' untuk autentikasi backend
+        const url = `${GAS_API_URL}?action=getAllAdmin&apiKey=${GAS_ADMIN_KEY}`;
+        const response = await fetch(url);
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
@@ -300,7 +303,11 @@ async function verifyDonation(rowNumber) {
         try {
             const response = await fetch(GAS_API_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: "verify", row: rowNumber })
+                body: JSON.stringify({ 
+                    action: "verify", 
+                    row: rowNumber,
+                    apiKey: GAS_ADMIN_KEY
+                })
             });
             const res = await response.json();
             if(res.status !== 'success') throw new Error(res.message);
@@ -550,7 +557,12 @@ async function handleEditSubmit(e) {
     try {
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "update", row: rowNumber, payload: payload })
+            body: JSON.stringify({ 
+                action: "update", 
+                row: rowNumber, 
+                payload: payload,
+                apiKey: GAS_ADMIN_KEY
+            })
         });
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);
@@ -566,7 +578,11 @@ async function executeDelete(rowNumber) {
     try {
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
-            body: JSON.stringify({ action: "delete", row: rowNumber })
+            body: JSON.stringify({ 
+                action: "delete", 
+                row: rowNumber,
+                apiKey: GAS_ADMIN_KEY
+            })
         });
         const res = await response.json();
         if(res.status !== 'success') throw new Error(res.message);

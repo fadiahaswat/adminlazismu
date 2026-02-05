@@ -15,6 +15,10 @@ export const RECAPTCHA_SITE_KEY = "YOUR_RECAPTCHA_V3_SITE_KEY";
 
 export const GAS_API_URL = "YOUR_GOOGLE_APPS_SCRIPT_URL";
 
+// API Key untuk autentikasi backend
+// Harus SAMA PERSIS dengan 'ADMIN_API_KEY' di file code.gs backend
+export const GAS_ADMIN_KEY = "Lazismu_2026_Secure_Key_#99";
+
 export const ALLOWED_ADMIN_EMAILS = [
     "admin1@example.com",
     "admin2@example.com"
