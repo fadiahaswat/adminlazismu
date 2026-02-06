@@ -118,38 +118,62 @@ window.logout = function() {
 onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('login-overlay');
     const errorMsg = document.getElementById('login-error');
+    const adminContent = document.getElementById('admin-content'); // Referensi ke konten utama
     
     if (user) {
         // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
         if (!ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
             console.warn("Akses ditolak - email tidak sah");
+            
             // Logout otomatis jika bukan admin yang diizinkan
             signOut(auth).then(() => {
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
                 errorMsg.classList.add('flex');
-                overlay.classList.remove('hidden');
+                
+                overlay.classList.remove('hidden'); // Pastikan overlay menutup layar
+                adminContent.classList.add('hidden'); // Pastikan konten tetap tersembunyi
             }).catch((error) => {
                 console.error("Gagal logout");
-                // Tetap tampilkan pesan error meskipun logout gagal
+                // Tetap tampilkan pesan error & sembunyikan konten meskipun logout gagal
                 errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
                 errorMsg.classList.remove('hidden');
                 errorMsg.classList.add('flex');
+                
                 overlay.classList.remove('hidden');
+                adminContent.classList.add('hidden');
             });
             return;
         }
         
         // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
         console.log("Admin terautentikasi");
-        overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
         
-        // Panggil fungsi ambil data Anda yang lama
+        // 1. Buka Gerbang: Sembunyikan Overlay Login
+        overlay.classList.add('hidden'); 
+        
+        // 2. Munculkan Konten Admin (Hanya muncul jika login sukses)
+        adminContent.classList.remove('hidden');
+        adminContent.classList.add('animate-enter'); // Jalankan animasi masuk yang cantik
+        
+        // 3. Panggil fungsi ambil data
         fetchData(); 
+        
     } else {
-        // JIKA TIDAK LOGIN / BELUM LOGIN
+        // JIKA TIDAK LOGIN / BELUM LOGIN / LOGOUT
         console.log("Belum login");
-        overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
+        
+        // 1. Tutup Gerbang: Munculkan Overlay Login
+        overlay.classList.remove('hidden'); 
+        
+        // 2. Sembunyikan Konten Admin (Agar tidak bisa diintip walau overlay dihapus)
+        adminContent.classList.add('hidden');
+        adminContent.classList.remove('animate-enter');
+        
+        // 3. Bersihkan data sensitif di tabel (Keamanan tambahan)
+        const tableBody = document.getElementById('table-body');
+        if (tableBody) tableBody.innerHTML = '';
+        allDonationData = []; 
     }
 });
 
