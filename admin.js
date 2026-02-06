@@ -143,6 +143,8 @@ onAuthStateChanged(auth, (user) => {
         // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
         console.log("Admin terautentikasi");
         overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
+
+        if(contentEl) contentEl.classList.remove('hidden'); // <-- TAMBAHKAN BARIS INI
         
         // Panggil fungsi ambil data Anda yang lama
         fetchData(); 
@@ -150,6 +152,7 @@ onAuthStateChanged(auth, (user) => {
         // JIKA TIDAK LOGIN / BELUM LOGIN
         console.log("Belum login");
         overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
+        if(contentEl) contentEl.classList.add('hidden'); // <-- TAMBAHKAN BARIS INI
     }
 });
 
