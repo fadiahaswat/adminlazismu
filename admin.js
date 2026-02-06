@@ -302,20 +302,24 @@ document.getElementById('confirm-modal-ok').onclick = () => { if (confirmCallbac
 // === CORE FUNCTIONS ===
 
 async function fetchData() {
-    loadingEl.classList.remove('hidden');
-    tableWrapperEl.classList.add('hidden');
-    refreshIcon.classList.add('fa-spin');
+    // [UPDATE] Tampilkan Skeleton, Sembunyikan Tabel & Card
+    const skeleton = document.getElementById('skeleton-loader');
+    const tableWrapper = document.getElementById('admin-table-wrapper');
+    const mobileCards = document.getElementById('mobile-card-view');
+    const refreshIcon = document.getElementById('refresh-icon');
+
+    if(skeleton) skeleton.classList.remove('hidden');
+    if(tableWrapper) tableWrapper.classList.add('hidden');
+    if(mobileCards) mobileCards.classList.add('hidden');
+    if(refreshIcon) refreshIcon.classList.add('fa-spin');
 
     try {
-        // Cek login di sisi Frontend (User Interface)
         const user = auth.currentUser;
         if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
+
+        const response = await fetch(GAS_API_URL); // GET Request (Sesuai diskusi sebelumnya)
         
-        // --- PERBAIKAN DI SINI ---
-        // Kembali menggunakan GET Request karena Code.gs belum support POST "fetch"
-        // Kita tidak mengirim token ke backend untuk aksi ini agar tidak error "Invalid action"
-        const response = await fetch(GAS_API_URL); 
-        
+        // ... (kode processing data sama seperti sebelumnya) ...
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
@@ -325,19 +329,18 @@ async function fetchData() {
 
     } catch (error) {
         console.error("Fetch error:", error);
-        
-        let errorMessage = "Tidak dapat memuat data. Periksa koneksi internet Anda.";
-        
-        if (error.message && 
-            !error.message.includes("6Le") && 
-            !error.message.includes("://") && 
-            error.message.length < 100) { 
-            errorMessage = "Gagal memuat data: " + error.message;
+        let errorMessage = "Gagal memuat data.";
+        if (error.message && error.message.length < 100 && !error.message.includes("://")) {
+            errorMessage = error.message;
         }
-        showAppAlert(errorMessage, true);
+        // Gunakan showToast untuk error ringan, atau showAppAlert untuk fatal
+        showToast(errorMessage, 'error'); 
     } finally {
-        loadingEl.classList.add('hidden');
-        refreshIcon.classList.remove('fa-spin');
+        // [UPDATE] Sembunyikan Skeleton, Munculkan Tabel (responsive CSS akan handle sisanya)
+        if(skeleton) skeleton.classList.add('hidden');
+        if(tableWrapper) tableWrapper.classList.remove('hidden');
+        if(mobileCards) mobileCards.classList.remove('hidden');
+        if(refreshIcon) refreshIcon.classList.remove('fa-spin');
     }
 }
 
