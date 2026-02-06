@@ -413,108 +413,149 @@ function calculateStatistics(data) {
 }
 
 function renderTable() {
-    rowsPerPage = parseInt(paginationRowsEl.value, 10);
-    const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    const paginatedData = filteredData.slice(start, end);
-
-    tableBodyEl.innerHTML = '';
+    const tableBodyEl = document.getElementById('table-body');
+    const mobileCardContainer = document.getElementById('mobile-card-view'); // Container baru
     
-    if (filteredData.length === 0) {
-        tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">Tidak ada data ditemukan</td></tr>';
-        tableWrapperEl.classList.remove('hidden');
+    // Bersihkan konten lama
+    tableBodyEl.innerHTML = '';
+    mobileCardContainer.innerHTML = '';
+
+    if (paginatedData.length === 0) {
+        // Tampilan Kosong (Bisa dipakai untuk Desktop & Mobile)
+        const emptyState = `
+            <tr><td colspan="8" class="text-center py-10 text-slate-400">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-inbox text-4xl mb-3 opacity-30"></i>
+                    <span>Tidak ada data ditemukan</span>
+                </div>
+            </td></tr>`;
+        tableBodyEl.innerHTML = emptyState;
+        mobileCardContainer.innerHTML = `<div class="text-center py-10 text-slate-400">Tidak ada data</div>`;
         return;
     }
-    
-    tableWrapperEl.classList.remove('hidden');
 
     paginatedData.forEach(row => {
+        // --- 1. RENDER DESKTOP (TABLE ROW) ---
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors group border-b border-slate-100";
+        tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0 group";
         
-        const dateObj = new Date(row.Timestamp);
-        const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
-        const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
-        // Logic Detail Donatur
-        let detailInfo = '';
-        let badgeTipe = 'bg-slate-100 text-slate-500';
+        // Status Badge Style
+        const statusClass = row.Status === "Terverifikasi" 
+            ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
+            : "bg-amber-100 text-amber-700 border-amber-200";
         
-        if (row.TipeDonatur === 'santri') {
-            badgeTipe = 'bg-orange-100 text-orange-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${escapeHtml(row.NamaSantri) || '-'}</div>`;
-        } else if (row.TipeDonatur === 'alumni') {
-            badgeTipe = 'bg-blue-100 text-blue-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${escapeHtml(row.DetailAlumni) || '-'}</div>`;
-        } else {
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
-        }
-
-        let methodColor = 'bg-slate-100 text-slate-500';
-        if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
-        if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
-        if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
-
-        // Highlight Kode Unik
-        const nominalVal = parseFloat(row.Nominal) || 0;
-        let nominalHTML = formatter.format(nominalVal);
-        if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
-            nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
-        }
-
-        // Logic Status & Tombol Verifikasi
-        const status = row.Status || "Belum Verifikasi";
-        let statusBadge = '';
-        let verifyBtnHTML = '';
-
-        if (status === 'Terverifikasi') {
-            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
-        } else {
-            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><i class="fas fa-clock"></i> Pending</span>`;
-            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${escapeHtml(row.row)}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
-        }
+        const isChecked = selectedRows.has(row.row) ? 'checked' : '';
 
         tr.innerHTML = `
+            <td class="px-6 py-4 text-center">
+                <input type="checkbox" class="row-checkbox w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500 cursor-pointer" 
+                    value="${row.row}" onchange="toggleRowSelection(${row.row}, this)" ${isChecked}>
+            </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <span class="block font-bold text-slate-700">${dateStr}</span>
-                <span class="text-xs text-slate-400">${timeStr}</span>
+                <div class="font-bold text-slate-700 text-xs">${formatDate(row.Timestamp)}</div>
+                <div class="text-[10px] text-slate-400">${formatTime(row.Timestamp)}</div>
             </td>
             <td class="px-6 py-4">
-                <span class="font-bold text-slate-800 block">${escapeHtml(row.NamaDonatur) || 'Hamba Allah'}</span>
-                <span class="text-xs text-slate-400 block">${escapeHtml(row.NoHP) || '-'}</span>
+                <div class="font-bold text-slate-800">${row.NamaDonatur}</div>
+                <div class="text-xs text-slate-500 flex items-center gap-1"><i class="fas fa-phone-alt text-[10px]"></i> ${row.NoHP}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block border border-orange-100">
+                    ${formatter.format(row.Nominal)}
+                </div>
             </td>
             <td class="px-6 py-4">
-                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${escapeHtml(row.TipeDonatur) || 'Umum'}</span>
-                <div class="text-xs font-semibold text-slate-600">${escapeHtml(row.JenisDonasi)}</div>
-                ${detailInfo}
+                <span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                    ${row.MetodePembayaran}
+                </span>
             </td>
-            <td class="px-6 py-4 text-right">
-                <span class="font-black text-slate-800 text-sm">${nominalHTML}</span>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${escapeHtml(row.MetodePembayaran) || '-'}</span>
+            <td class="px-6 py-4 text-xs text-slate-500 max-w-[200px] truncate" title="${row.JenisDonasi}">
+                ${row.JenisDonasi}
             </td>
             <td class="px-6 py-4 text-center">
-                ${statusBadge}
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${statusClass}">
+                    ${row.Status === "Terverifikasi" ? '<i class="fas fa-check-circle mr-1"></i>' : '<i class="fas fa-clock mr-1"></i>'}
+                    ${row.Status}
+                </span>
             </td>
-            <td class="px-6 py-4 text-right whitespace-nowrap">
-                <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
+            <td class="px-6 py-4 text-center">
+                <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                    ${row.Status !== "Terverifikasi" ? `
+                    <button onclick="verifyAction(${row.row})" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition flex items-center justify-center border border-green-200 hover:border-green-600" title="Verifikasi" aria-label="Verifikasi">
+                        <i class="fas fa-check"></i>
+                    </button>` : ''}
+                    
+                    <button onclick="editAction(${row.row})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition flex items-center justify-center border border-blue-200 hover:border-blue-600" title="Edit" aria-label="Edit">
+                        <i class="fas fa-pencil-alt"></i>
+                    </button>
+                    
+                    <button onclick="deleteAction(${row.row})" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition flex items-center justify-center border border-red-200 hover:border-red-600" title="Hapus" aria-label="Hapus">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
 
-                    ${verifyBtnHTML}
-                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${escapeHtml(row.row)}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
-                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${escapeHtml(row.row)}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <button onclick="generateReceipt(${row.row})" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white transition flex items-center justify-center border border-purple-200 hover:border-purple-600" title="Kuitansi" aria-label="Kuitansi">
+                         <i class="fas fa-file-invoice"></i>
+                    </button>
                 </div>
             </td>
         `;
         tableBodyEl.appendChild(tr);
+
+        // --- 2. RENDER MOBILE (CARD VIEW) ---
+        // Tampilan khusus HP yang lebih ramah jempol
+        const cardHTML = `
+            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] relative overflow-hidden">
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${row.Status === 'Terverifikasi' ? 'bg-green-500' : 'bg-yellow-500'}"></div>
+                
+                <div class="pl-2">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${formatDate(row.Timestamp)}</span>
+                            <h4 class="font-bold text-slate-800 text-lg leading-tight mt-1">${row.NamaDonatur}</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">${row.JenisDonasi}</p>
+                        </div>
+                        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${statusClass}">
+                            ${row.Status}
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-xl p-3 mb-4 flex justify-between items-center border border-slate-100">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Nominal</span>
+                            <span class="font-black text-slate-800 text-lg">${formatter.format(row.Nominal)}</span>
+                        </div>
+                        <div class="text-right">
+                             <span class="text-[10px] text-slate-400 font-bold uppercase">Metode</span>
+                             <div class="font-bold text-slate-600 text-sm">${row.MetodePembayaran}</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2">
+                         ${row.Status !== "Terverifikasi" ? `
+                         <button onclick="verifyAction(${row.row})" class="col-span-1 bg-green-50 text-green-700 py-2.5 rounded-lg text-xs font-bold border border-green-200 hover:bg-green-100 flex flex-col items-center gap-1">
+                            <i class="fas fa-check text-sm"></i> Verif
+                         </button>` : 
+                         `<div class="col-span-1 flex items-center justify-center text-green-300"><i class="fas fa-check-circle text-2xl"></i></div>`
+                         }
+                         
+                         <button onclick="editAction(${row.row})" class="bg-blue-50 text-blue-700 py-2.5 rounded-lg text-xs font-bold border border-blue-200 hover:bg-blue-100 flex flex-col items-center gap-1">
+                            <i class="fas fa-pencil-alt text-sm"></i> Edit
+                         </button>
+                         <button onclick="generateReceipt(${row.row})" class="bg-purple-50 text-purple-700 py-2.5 rounded-lg text-xs font-bold border border-purple-200 hover:bg-purple-100 flex flex-col items-center gap-1">
+                            <i class="fas fa-file-invoice text-sm"></i> Kuitansi
+                         </button>
+                         <button onclick="deleteAction(${row.row})" class="bg-red-50 text-red-700 py-2.5 rounded-lg text-xs font-bold border border-red-200 hover:bg-red-100 flex flex-col items-center gap-1">
+                            <i class="fas fa-trash-alt text-sm"></i> Hapus
+                         </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        mobileCardContainer.innerHTML += cardHTML;
     });
 
-    // Update Pagination Info
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
-    paginationPrevBtn.disabled = currentPage === 1;
-    paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    renderPagination();
+    updateBulkActionBar(); // Pastikan status seleksi tetap terjaga
 }
 
 function populateFilterDropdowns(data) {
