@@ -841,3 +841,134 @@ tableWrapperEl.addEventListener('click', (e) => {
     // Handle Print Button
     if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
 });
+
+// --- FITUR BARU: TOAST NOTIFICATION ---
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    
+    // Desain Toast
+    const bgColor = type === 'success' ? 'bg-white border-l-4 border-green-500' : 'bg-white border-l-4 border-red-500';
+    const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+    toast.className = `${bgColor} text-slate-700 px-4 py-3 rounded-lg shadow-xl shadow-slate-200/50 flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300 min-w-[300px] pointer-events-auto border border-slate-100`;
+    
+    toast.innerHTML = `
+        <div class="${iconColor} text-xl"><i class="fas ${icon}"></i></div>
+        <div>
+            <div class="font-bold text-sm">${type === 'success' ? 'Berhasil' : 'Gagal'}</div>
+            <div class="text-xs text-slate-500">${message}</div>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    // Animasi Masuk
+    requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
+    });
+
+    // Hilang Otomatis setelah 3 detik
+    setTimeout(() => {
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+// --- LOGIKA CHECKBOX & BULK ACTION ---
+function updateBulkActionBar() {
+    const bar = document.getElementById('bulk-action-bar');
+    const countSpan = document.getElementById('selected-count');
+    const selectAllBox = document.getElementById('select-all');
+    
+    // Update angka
+    countSpan.textContent = selectedRows.size;
+    
+    // Tampilkan/Sembunyikan Bar
+    if (selectedRows.size > 0) {
+        bar.classList.remove('hidden');
+    } else {
+        bar.classList.add('hidden');
+        if(selectAllBox) selectAllBox.checked = false;
+    }
+
+    // Update status checkbox individual di tampilan saat ini
+    document.querySelectorAll('.row-checkbox').forEach(cb => {
+        cb.checked = selectedRows.has(parseInt(cb.value));
+    });
+}
+
+// Dipanggil saat checkbox "Pilih Semua" diklik
+document.getElementById('select-all')?.addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = e.target.checked;
+        const rowId = parseInt(cb.value);
+        if (e.target.checked) selectedRows.add(rowId);
+        else selectedRows.delete(rowId);
+    });
+    updateBulkActionBar();
+});
+
+// Dipanggil saat checkbox individual diklik (fungsi global)
+window.toggleRowSelection = function(rowId, checkbox) {
+    if (checkbox.checked) selectedRows.add(rowId);
+    else selectedRows.delete(rowId);
+    updateBulkActionBar();
+}
+
+// Fungsi Eksekusi Verifikasi Massal
+window.verifySelected = async function() {
+    if (selectedRows.size === 0) return;
+    
+    if(!confirm(`Yakin ingin memverifikasi ${selectedRows.size} data sekaligus?`)) return;
+
+    const btn = document.querySelector('#bulk-action-bar button');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Memproses...`;
+    btn.disabled = true;
+
+    let successCount = 0;
+    
+    // Loop dan kirim request satu per satu (karena backend belum support bulk array)
+    // Menggunakan for...of untuk urutan (sequence) agar tidak membebani server
+    for (let rowId of selectedRows) {
+        try {
+            await sendData({ action: 'verify', row: rowId });
+            successCount++;
+        } catch (err) {
+            console.error(`Gagal verifikasi row ${rowId}`, err);
+        }
+    }
+
+    // Reset UI
+    selectedRows.clear();
+    updateBulkActionBar();
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+    
+    showToast(`${successCount} data berhasil diverifikasi!`);
+    fetchData(); // Refresh tabel
+}
+
+// --- VALIDASI REAL-TIME INPUT ---
+document.addEventListener('DOMContentLoaded', () => {
+    const nominalInput = document.getElementById('edit-Nominal');
+    const errorSpan = document.getElementById('err-nominal');
+    
+    if(nominalInput) {
+        nominalInput.addEventListener('input', function(e) {
+            const val = parseFloat(e.target.value);
+            if (val < 0 || isNaN(val)) {
+                this.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
+                this.classList.remove('border-slate-200', 'focus:border-orange-500', 'focus:ring-orange-200');
+                errorSpan.classList.remove('hidden');
+            } else {
+                this.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-200');
+                this.classList.add('border-slate-200', 'focus:border-orange-500', 'focus:ring-orange-200');
+                errorSpan.classList.add('hidden');
+            }
+        });
+    }
+});
