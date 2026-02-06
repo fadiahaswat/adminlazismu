@@ -151,7 +151,6 @@
                                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">Rp</span>
                                         <input type="number" id="edit-Nominal" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all outline-none">
                                     </div>
-                                    <span id="err-nominal" class="hidden text-xs text-red-500 font-bold mt-1 ml-1"><i class="fas fa-exclamation-circle mr-1"></i> Nominal tidak valid</span>
                                 </div>
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-500 mb-1.5 ml-1">Jenis Donasi</label>
@@ -421,51 +420,23 @@
                 </div>
             </div>
 
-            <div id="skeleton-loader" class="hidden w-full bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 animate-pulse">
-    <div class="h-8 bg-slate-200 rounded-lg w-1/3 mb-6"></div> <div class="space-y-4">
-        <div class="flex gap-4"><div class="h-12 bg-slate-100 rounded-lg w-10"></div><div class="h-12 bg-slate-100 rounded-lg w-full"></div></div>
-        <div class="flex gap-4"><div class="h-12 bg-slate-100 rounded-lg w-10"></div><div class="h-12 bg-slate-100 rounded-lg w-full"></div></div>
-        <div class="flex gap-4"><div class="h-12 bg-slate-100 rounded-lg w-10"></div><div class="h-12 bg-slate-100 rounded-lg w-full"></div></div>
-        <div class="flex gap-4"><div class="h-12 bg-slate-100 rounded-lg w-10"></div><div class="h-12 bg-slate-100 rounded-lg w-full"></div></div>
-        <div class="flex gap-4"><div class="h-12 bg-slate-100 rounded-lg w-10"></div><div class="h-12 bg-slate-100 rounded-lg w-full"></div></div>
-    </div>
-</div>
-
-<div id="bulk-action-bar" class="hidden transition-all duration-300 transform bg-orange-50 border border-orange-200 p-4 rounded-xl mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-    <div class="flex items-center gap-2">
-        <div class="bg-orange-100 text-orange-600 p-2 rounded-full"><i class="fas fa-check-double"></i></div>
-        <span class="text-sm font-bold text-orange-800"><span id="selected-count">0</span> Data Dipilih</span>
-    </div>
-    <div class="flex gap-2 w-full sm:w-auto">
-        <button onclick="verifySelected()" class="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm items-center justify-center flex">
-            <i class="fas fa-check-circle mr-2"></i> Verifikasi Terpilih
-        </button>
-        </div>
-</div>
-
-<div id="admin-table-wrapper" class="hidden md:block overflow-x-auto custom-scrollbar bg-white rounded-[2rem] shadow-sm border border-slate-200/60">
-    <table class="w-full text-left border-collapse">
-        <thead>
-            <tr class="bg-slate-50/50 text-slate-500 text-sm uppercase tracking-wider border-b border-slate-100">
-                <th class="px-6 py-5 rounded-tl-lg w-10 text-center">
-                    <input type="checkbox" id="select-all" class="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500 cursor-pointer transition">
-                </th>
-                <th class="px-6 py-5 font-bold">Waktu</th>
-                <th class="px-6 py-5 font-bold">Donatur</th>
-                <th class="px-6 py-5 font-bold">Nominal</th>
-                <th class="px-6 py-5 font-bold">Metode</th>
-                <th class="px-6 py-5 font-bold">Peruntukan</th>
-                <th class="px-6 py-5 font-bold text-center">Status</th>
-                <th class="px-6 py-5 rounded-tr-lg font-bold text-center">Aksi</th>
-            </tr>
-        </thead>
-        <tbody id="table-body" class="divide-y divide-slate-50 text-sm text-slate-600">
-            </tbody>
-    </table>
-</div>
-
-<div id="mobile-card-view" class="md:hidden space-y-4">
-    </div>
+            <div id="admin-table-wrapper" class="hidden overflow-x-auto custom-scrollbar bg-white">
+                <table class="w-full min-w-[1000px] text-left border-collapse">
+                    <thead class="bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-wider sticky top-0 z-10 border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-5 rounded-tl-lg">Waktu</th>
+                            <th class="px-6 py-5">Donatur</th>
+                            <th class="px-6 py-5">Kategori</th>
+                            <th class="px-6 py-5 text-right">Nominal</th>
+                            <th class="px-6 py-5 text-center">Metode</th>
+                            <th class="px-6 py-5 text-center">Status</th> 
+                            <th class="px-6 py-5 text-right rounded-tr-lg">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-slate-100 text-sm text-slate-600 font-medium">
+                        </tbody>
+                </table>
+            </div>
 
             <div id="admin-loading" class="p-24 flex flex-col items-center justify-center text-slate-400">
                 <div class="relative w-16 h-16 mb-6">
@@ -549,11 +520,5 @@
     </div>
 
     <script type="module" src="admin.js"></script>
-    <div id="toast-container" class="fixed bottom-5 right-5 z-[110] flex flex-col gap-2 pointer-events-none"></div>
 </body>
 </html>
-
-
-
-
-
