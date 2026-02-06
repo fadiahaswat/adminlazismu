@@ -47,6 +47,9 @@ const auth = getAuth(app);
 // URL API GOOGLE SHEET (TETAP SAMA)
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
+// --- VARIABEL BARU UNTUK BULK ACTION ---
+let selectedRows = new Set(); // Menyimpan ID baris yang dicentang
+
 // Konstanta untuk button HTML (untuk konsistensi)
 const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
 
