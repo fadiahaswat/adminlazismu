@@ -1,25 +1,24 @@
-// =====================================================================
-// 1. IMPORT LIBRARY FIREBASE
-// =====================================================================
+// --- IMPORT PERALATAN FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+// [BARU] Import App Check
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
-// =====================================================================
-// 2. KONFIGURASI
-// =====================================================================
-
-// Konfigurasi Firebase Anda
+// --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
+// PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
+// Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
 const firebaseConfig = {
-    apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
-    authDomain: "lazismu-auth.firebaseapp.com",
-    projectId: "lazismu-auth",
-    storageBucket: "lazismu-auth.firebasestorage.app",
-    messagingSenderId: "398570239500",
-    appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
+  apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
+  authDomain: "lazismu-auth.firebaseapp.com",
+  projectId: "lazismu-auth",
+  storageBucket: "lazismu-auth.firebasestorage.app",
+  messagingSenderId: "398570239500",
+  appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
 };
 
-// Daftar Email Admin yang Diizinkan
+// --- KONFIGURASI KEAMANAN ---
+// Email yang diizinkan untuk login ke admin dashboard
 const ALLOWED_ADMIN_EMAILS = [
     "lazismumuallimin@gmail.com",
     "ad.lazismumuallimin@gmail.com",
@@ -27,452 +26,510 @@ const ALLOWED_ADMIN_EMAILS = [
 ];
 const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
 
-// URL Google Apps Script (Backend)
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
-
-// Inisialisasi Firebase
+// --- NYALAKAN APLIKASI ---
 const app = initializeApp(firebaseConfig);
+
+// [BARU] NYALAKAN APP CHECK (SATPAM RECAPTCHA)
+let appCheck;
+try {
+  appCheck = initializeAppCheck(app, {
+    provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
+    isTokenAutoRefreshEnabled: true
+  });
+} catch (error) {
+  console.warn("App Check initialization failed - continuing without App Check");
+  // App Check gagal, tapi aplikasi tetap bisa jalan (optional security layer)
+}
+
+// --- NYALAKAN AUTH ---
 const auth = getAuth(app);
 
-// Inisialisasi App Check (Keamanan Tambahan)
-try {
-    initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
-        isTokenAutoRefreshEnabled: true
-    });
-} catch (e) { console.warn("App Check init skipped"); }
+// URL API GOOGLE SHEET (TETAP SAMA)
+const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
-// =====================================================================
-// 3. VARIABEL GLOBAL
-// =====================================================================
-let allDonationData = [];
-let filteredData = [];
-let currentPage = 1;
-let rowsPerPage = 50;
-let selectedRows = new Set(); // Menyimpan baris yang dicentang (Bulk Action)
+// Konstanta untuk button HTML (untuk konsistensi)
+const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
 
-// Formatter Rupiah
-const formatter = new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-});
-
-// =====================================================================
-// 4. FUNGSI UTAMA (AUTH & FETCH)
-// =====================================================================
-
-// --- LOGIN GOOGLE ---
+// --- FUNGSI LOGIN (PINTU MASUK) ---
+// Google Sign-In untuk admin yang terotorisasi
 document.getElementById('btn-login-google').addEventListener('click', async () => {
-    const btn = document.getElementById('btn-login-google');
     const errorMsg = document.getElementById('login-error');
-    
-    // UI Loading
+    const btn = document.getElementById('btn-login-google');
+
+    // Ubah tombol jadi loading
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
     btn.disabled = true;
     errorMsg.classList.add('hidden');
     errorMsg.classList.remove('flex');
 
     try {
+        // Buat provider Google
         const provider = new GoogleAuthProvider();
+        
+        // Login dengan popup Google
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-
-        // Cek apakah email terdaftar sebagai admin
+        
+        // VALIDASI KEAMANAN: Cek apakah email yang login adalah email admin yang diizinkan
         if (!ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
-            await signOut(auth); // Tendang keluar jika bukan admin
-            throw new Error("Akses Ditolak! Email Anda tidak terdaftar sebagai admin.");
+            // Logout otomatis jika bukan admin yang diizinkan
+            await signOut(auth);
+            errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat login.";
+            errorMsg.classList.remove('hidden');
+            errorMsg.classList.add('flex');
+            btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
+            btn.disabled = false;
+            return;
         }
-
+        
+        // Jika berhasil dan email diizinkan, nanti 'Pengamat' di bawah yang bekerja otomatis.
     } catch (error) {
-        console.error("Login Error:", error);
-        errorMsg.textContent = error.message;
+        // Kalau gagal - Log error tanpa detail sensitif
+        console.error("Login gagal");
+        
+        // Handle error yang lebih spesifik
+        let errorMessage = "Gagal login dengan Google!";
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMessage = "Login dibatalkan. Silakan coba lagi.";
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMessage = "Popup diblokir browser. Izinkan popup untuk login.";
+        }
+        
+        errorMsg.textContent = errorMessage;
         errorMsg.classList.remove('hidden');
         errorMsg.classList.add('flex');
-        btn.innerHTML = '<i class="fab fa-google text-xl text-red-500"></i><span>Masuk dengan Google</span>';
+        btn.innerHTML = BTN_LOGIN_GOOGLE_HTML;
         btn.disabled = false;
     }
 });
 
-// --- LOGOUT ---
+// --- FUNGSI LOGOUT (KELUAR) ---
+// Kita ganti fungsi logout lama Anda
 window.logout = function() {
-    signOut(auth).then(() => location.reload());
-};
+    signOut(auth).then(() => {
+        location.reload();
+    }).catch((error) => {
+        console.error("Gagal logout", error);
+    });
+}
 
-// --- OBSERVER STATUS LOGIN (Anti-Inspect Element) ---
+// --- SANG PENGAMAT (YANG BEKERJA OTOMATIS) ---
+// Ini pengganti sessionStorage. Kode ini akan jalan sendiri ngecek status login.
 onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('login-overlay');
-    const adminContent = document.getElementById('admin-content');
+    const errorMsg = document.getElementById('login-error');
     
-    if (user && ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
-        // LOGIN SUKSES: Buka konten
-        overlay.classList.add('hidden');
-        adminContent.classList.remove('hidden');
-        adminContent.classList.add('animate-enter');
+    if (user) {
+        // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
+        if (!ALLOWED_ADMIN_EMAILS_LOWER.includes(user.email.toLowerCase().trim())) {
+            console.warn("Akses ditolak - email tidak sah");
+            // Logout otomatis jika bukan admin yang diizinkan
+            signOut(auth).then(() => {
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
+                overlay.classList.remove('hidden');
+            }).catch((error) => {
+                console.error("Gagal logout");
+                // Tetap tampilkan pesan error meskipun logout gagal
+                errorMsg.textContent = "Akses Ditolak! Hanya admin yang berwenang dapat mengakses dashboard ini.";
+                errorMsg.classList.remove('hidden');
+                errorMsg.classList.add('flex');
+                overlay.classList.remove('hidden');
+            });
+            return;
+        }
         
-        // Ambil data
-        fetchData();
+        // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
+        console.log("Admin terautentikasi");
+        overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
+        
+        // Panggil fungsi ambil data Anda yang lama
+        fetchData(); 
     } else {
-        // BELUM LOGIN / LOGOUT: Tutup konten
-        if(user) signOut(auth); // Paksa logout jika email nyasar
-        overlay.classList.remove('hidden');
-        adminContent.classList.add('hidden');
-        adminContent.classList.remove('animate-enter');
+        // JIKA TIDAK LOGIN / BELUM LOGIN
+        console.log("Belum login");
+        overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
     }
 });
 
-// --- AMBIL DATA (GET) ---
-async function fetchData() {
-    // Tampilkan Skeleton Loading
-    const skeleton = document.getElementById('skeleton-loader');
-    const tableWrapper = document.getElementById('admin-table-wrapper');
-    const mobileCards = document.getElementById('mobile-card-view');
-    const refreshIcon = document.getElementById('refresh-icon');
+// ================================================================
+// BATAS SUCI: KODE DI BAWAH INI ADALAH KODE LAMA ANDA (VARIABLES, DST)
+// JANGAN DIHAPUS, BIARKAN SAJA MENYAMBUNG DI BAWAH SINI
+// ================================================================
 
-    if(skeleton) skeleton.classList.remove('hidden');
-    if(tableWrapper) tableWrapper.classList.add('hidden');
-    if(mobileCards) mobileCards.classList.add('hidden');
-    if(refreshIcon) refreshIcon.classList.add('fa-spin');
+// === SECURITY UTILITIES ===
+/**
+ * Fungsi untuk escape HTML special characters mencegah XSS attacks
+ * @param {string} text - Text yang akan di-escape
+ * @returns {string} - Text yang sudah aman dari XSS
+ */
+function escapeHtml(text) {
+    if (text == null) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// === VARIABLES ===
+const loadingEl = document.getElementById('admin-loading');
+const tableWrapperEl = document.getElementById('admin-table-wrapper');
+const tableBodyEl = document.getElementById('table-body');
+const refreshButton = document.getElementById('refresh-button');
+const refreshIcon = document.getElementById('refresh-icon');
+
+// Statistik Elements
+const statTotalEl = document.getElementById('admin-stat-total');
+const statDonaturEl = document.getElementById('admin-stat-donatur');
+const statHariIniEl = document.getElementById('admin-stat-hari-ini');
+const statTertinggiEl = document.getElementById('admin-stat-tertinggi');
+const statRataEl = document.getElementById('admin-stat-rata');
+const statTipeEl = document.getElementById('admin-stat-tipe');
+
+// Modal Elements
+const alertModal = document.getElementById('alert-modal');
+const confirmModal = document.getElementById('confirm-modal');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+
+// Filter & Paging Elements
+const filterSearchEl = document.getElementById('filter-search');
+const filterStatusEl = document.getElementById('filter-status'); 
+const filterDateFromEl = document.getElementById('filter-date-from');
+const filterDateToEl = document.getElementById('filter-date-to');
+const filterJenisEl = document.getElementById('filter-jenis');
+const filterMetodeEl = document.getElementById('filter-metode');
+const filterApplyBtn = document.getElementById('filter-apply-button');
+const filterResetBtn = document.getElementById('filter-reset-button');
+const exportCsvBtn = document.getElementById('export-csv-button');
+const paginationRowsEl = document.getElementById('pagination-rows');
+const paginationInfoEl = document.getElementById('pagination-info');
+const paginationPrevBtn = document.getElementById('pagination-prev');
+const paginationNextBtn = document.getElementById('pagination-next');
+
+// Data State
+let allDonationData = [];
+let filteredData = [];
+let currentPage = 1;
+let rowsPerPage = 50;
+let confirmCallback = null;
+
+const formatter = new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+});
+
+// === MODAL FUNCTIONS ===
+function showModal(el) {
+    el.classList.remove('hidden');
+    setTimeout(() => {
+        el.classList.remove('opacity-0');
+        el.querySelector('.modal-content').classList.remove('scale-95');
+        el.querySelector('.modal-content').classList.add('scale-100');
+    }, 10);
+}
+
+function hideModal(el) {
+    el.classList.add('opacity-0');
+    el.querySelector('.modal-content').classList.remove('scale-100');
+    el.querySelector('.modal-content').classList.add('scale-95');
+    setTimeout(() => el.classList.add('hidden'), 250);
+}
+
+function showAppAlert(msg, isError = false) {
+    const title = document.getElementById('alert-modal-title');
+    const message = document.getElementById('alert-modal-message');
+    const iconContainer = document.getElementById('alert-icon-container');
+    
+    title.textContent = isError ? "Terjadi Kesalahan" : "Berhasil";
+    title.className = isError ? "text-xl font-black text-red-600 mb-2" : "text-xl font-black text-green-600 mb-2";
+    message.textContent = msg;
+    
+    iconContainer.innerHTML = isError 
+        ? `<div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-3xl mx-auto"><i class="fas fa-times"></i></div>`
+        : `<div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto"><i class="fas fa-check"></i></div>`;
+    
+    showModal(alertModal);
+}
+
+function showAppConfirm(msg, callback) {
+    document.getElementById('confirm-modal-message').textContent = msg;
+    confirmCallback = callback;
+    showModal(confirmModal);
+}
+
+// Close Modal Listeners
+document.getElementById('alert-modal-close').onclick = () => hideModal(alertModal);
+document.getElementById('confirm-modal-cancel').onclick = () => hideModal(confirmModal);
+document.getElementById('edit-modal-close').onclick = () => hideModal(editModal);
+document.getElementById('edit-modal-cancel').onclick = () => hideModal(editModal);
+document.getElementById('confirm-modal-ok').onclick = () => { if (confirmCallback) confirmCallback(); hideModal(confirmModal); };
+
+
+// === CORE FUNCTIONS ===
+
+async function fetchData() {
+    loadingEl.classList.remove('hidden');
+    tableWrapperEl.classList.add('hidden');
+    refreshIcon.classList.add('fa-spin');
 
     try {
+        // Cek login di sisi Frontend (User Interface)
         const user = auth.currentUser;
-        if (!user) throw new Error("Sesi login berakhir.");
-
-        // Request GET ke Google Apps Script
-        const response = await fetch(GAS_API_URL);
-        const result = await response.json();
-
-        if (result.status !== "success") throw new Error(result.message);
-
-        // Simpan & Urutkan Data (Terbaru di atas)
-        allDonationData = result.data.sort((a, b) => b.row - a.row);
+        if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
         
-        // Setup Filter & Tampilkan
+        // --- PERBAIKAN DI SINI ---
+        // Kembali menggunakan GET Request karena Code.gs belum support POST "fetch"
+        // Kita tidak mengirim token ke backend untuk aksi ini agar tidak error "Invalid action"
+        const response = await fetch(GAS_API_URL); 
+        
+        const result = await response.json();
+        if (result.status !== "success") throw new Error(result.message);
+        
+        allDonationData = result.data.sort((a, b) => b.row - a.row);
         populateFilterDropdowns(allDonationData);
         applyFilters();
 
     } catch (error) {
-        console.error("Fetch Error:", error);
-        showToast(error.message || "Gagal memuat data", 'error');
+        console.error("Fetch error:", error);
+        
+        let errorMessage = "Tidak dapat memuat data. Periksa koneksi internet Anda.";
+        
+        if (error.message && 
+            !error.message.includes("6Le") && 
+            !error.message.includes("://") && 
+            error.message.length < 100) { 
+            errorMessage = "Gagal memuat data: " + error.message;
+        }
+        showAppAlert(errorMessage, true);
     } finally {
-        // Sembunyikan Loading
-        if(skeleton) skeleton.classList.add('hidden');
-        if(tableWrapper) tableWrapper.classList.remove('hidden');
-        if(mobileCards) mobileCards.classList.remove('hidden');
-        if(refreshIcon) refreshIcon.classList.remove('fa-spin');
+        loadingEl.classList.add('hidden');
+        refreshIcon.classList.remove('fa-spin');
     }
 }
 
-// --- KIRIM DATA (POST Helper) ---
-async function sendData(payload) {
-    const user = auth.currentUser;
-    if (!user) throw new Error("Silakan login kembali.");
+async function verifyDonation(rowNumber) {
+    showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
+        try {
+            // 1. Ambil User & Token
+            const user = auth.currentUser;
+            if (!user) throw new Error("Sesi habis, silakan login ulang.");
+            const token = await user.getIdToken(); // <--- INI KUNCINYA
 
-    // Ambil Token Keamanan
-    const token = await user.getIdToken();
-    payload.authToken = token; 
+            // 2. Kirim ke Backend dengan Token
+            const response = await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "verify", 
+                    row: rowNumber,
+                    authToken: token // <--- Token diselipkan di sini
+                })
+            });
+            
+            const res = await response.json();
+            if(res.status !== 'success') throw new Error(res.message);
+            
+            showAppAlert("Donasi berhasil diverifikasi!");
+            fetchData(); 
+        } catch (error) {
+            console.error("Verification error:", error);
+            showAppAlert("Gagal verifikasi: " + error.message, true);
+        }
+    });
+}
 
-    const response = await fetch(GAS_API_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
+function calculateStatistics(data) {
+    let total = 0;
+    let count = data.length;
+    let maxVal = 0;
+    let todayTotal = 0;
+    const todayStr = new Date().toDateString();
+    
+    const typeCounts = {};
+
+    data.forEach(row => {
+        const val = parseFloat(row.Nominal) || 0;
+        total += val;
+        if (val > maxVal) maxVal = val;
+        
+        if (new Date(row.Timestamp).toDateString() === todayStr) {
+            todayTotal += val;
+        }
+
+        const type = row.JenisDonasi || 'Lainnya';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
 
-    const res = await response.json();
-    if (res.status !== 'success') throw new Error(res.message);
-    return res;
-}
-
-// =====================================================================
-// 5. RENDERING UI (Tabel Desktop & Kartu Mobile)
-// =====================================================================
-
-function renderTable() {
-    const tableBodyEl = document.getElementById('table-body');
-    const mobileCardContainer = document.getElementById('mobile-card-view');
-    
-    // Reset Konten
-    tableBodyEl.innerHTML = '';
-    mobileCardContainer.innerHTML = '';
-
-    // Hitung Pagination
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    // Tampilan Kosong
-    if (paginatedData.length === 0) {
-        const emptyHTML = `<tr><td colspan="8" class="text-center py-10 text-slate-400">Tidak ada data ditemukan</td></tr>`;
-        tableBodyEl.innerHTML = emptyHTML;
-        mobileCardContainer.innerHTML = `<div class="text-center py-10 text-slate-400">Tidak ada data</div>`;
-        renderPagination();
-        return;
+    let topType = '-';
+    let topCount = 0;
+    for (const [key, val] of Object.entries(typeCounts)) {
+        if (val > topCount) {
+            topCount = val;
+            topType = key;
+        }
     }
 
-    paginatedData.forEach(row => {
-        // Tentukan Warna Status
-        const statusClass = row.Status === "Terverifikasi" 
-            ? "bg-emerald-100 text-emerald-700 border-emerald-200" 
-            : "bg-amber-100 text-amber-700 border-amber-200";
-        
-        const isChecked = selectedRows.has(row.row) ? 'checked' : '';
+    const avgVal = count > 0 ? total / count : 0;
 
-        // --- 1. RENDER DESKTOP (TABLE ROW) ---
+    statTotalEl.textContent = formatter.format(total);
+    statDonaturEl.textContent = count;
+    statHariIniEl.textContent = formatter.format(todayTotal);
+    statTertinggiEl.textContent = formatter.format(maxVal);
+    statRataEl.textContent = formatter.format(avgVal);
+    statTipeEl.textContent = topType;
+}
+
+function renderTable() {
+    rowsPerPage = parseInt(paginationRowsEl.value, 10);
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const paginatedData = filteredData.slice(start, end);
+
+    tableBodyEl.innerHTML = '';
+    
+    if (filteredData.length === 0) {
+        tableBodyEl.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400 font-bold">Tidak ada data ditemukan</td></tr>';
+        tableWrapperEl.classList.remove('hidden');
+        return;
+    }
+    
+    tableWrapperEl.classList.remove('hidden');
+
+    paginatedData.forEach(row => {
         const tr = document.createElement('tr');
-        tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-b-0 group";
+        tr.className = "hover:bg-slate-50 transition-colors group border-b border-slate-100";
         
+        const dateObj = new Date(row.Timestamp);
+        const dateStr = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' });
+        const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+        // Logic Detail Donatur
+        let detailInfo = '';
+        let badgeTipe = 'bg-slate-100 text-slate-500';
+        
+        if (row.TipeDonatur === 'santri') {
+            badgeTipe = 'bg-orange-100 text-orange-600';
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${escapeHtml(row.NamaSantri) || '-'}</div>`;
+        } else if (row.TipeDonatur === 'alumni') {
+            badgeTipe = 'bg-blue-100 text-blue-600';
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${escapeHtml(row.DetailAlumni) || '-'}</div>`;
+        } else {
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5">Umum</div>`;
+        }
+
+        let methodColor = 'bg-slate-100 text-slate-500';
+        if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
+        if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
+        if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
+
+        // Highlight Kode Unik
+        const nominalVal = parseFloat(row.Nominal) || 0;
+        let nominalHTML = formatter.format(nominalVal);
+        if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
+            nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
+        }
+
+        // Logic Status & Tombol Verifikasi
+        const status = row.Status || "Belum Verifikasi";
+        let statusBadge = '';
+        let verifyBtnHTML = '';
+
+        if (status === 'Terverifikasi') {
+            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
+        } else {
+            statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><i class="fas fa-clock"></i> Pending</span>`;
+            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${escapeHtml(row.row)}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
+        }
+
         tr.innerHTML = `
-            <td class="px-6 py-4 text-center">
-                <input type="checkbox" class="row-checkbox w-4 h-4 text-orange-500 rounded focus:ring-orange-500 cursor-pointer" 
-                    value="${row.row}" onchange="toggleRowSelection(${row.row}, this)" ${isChecked}>
-            </td>
             <td class="px-6 py-4 whitespace-nowrap">
-                <div class="font-bold text-slate-700 text-xs">${formatDate(row.Timestamp)}</div>
-                <div class="text-[10px] text-slate-400">${formatTime(row.Timestamp)}</div>
+                <span class="block font-bold text-slate-700">${dateStr}</span>
+                <span class="text-xs text-slate-400">${timeStr}</span>
             </td>
             <td class="px-6 py-4">
-                <div class="font-bold text-slate-800">${row.NamaDonatur}</div>
-                <div class="text-xs text-slate-500">${row.NoHP || '-'}</div>
+                <span class="font-bold text-slate-800 block">${escapeHtml(row.NamaDonatur) || 'Hamba Allah'}</span>
+                <span class="text-xs text-slate-400 block">${escapeHtml(row.NoHP) || '-'}</span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <div class="font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-lg inline-block border border-orange-100">
-                    ${formatter.format(row.Nominal)}
-                </div>
+            <td class="px-6 py-4">
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${escapeHtml(row.TipeDonatur) || 'Umum'}</span>
+                <div class="text-xs font-semibold text-slate-600">${escapeHtml(row.JenisDonasi)}</div>
+                ${detailInfo}
             </td>
-            <td class="px-6 py-4"><span class="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">${row.MetodePembayaran}</span></td>
-            <td class="px-6 py-4 text-xs text-slate-500 truncate max-w-[150px]">${row.JenisDonasi}</td>
-            <td class="px-6 py-4 text-center">
-                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${statusClass}">${row.Status}</span>
+            <td class="px-6 py-4 text-right">
+                <span class="font-black text-slate-800 text-sm">${nominalHTML}</span>
             </td>
             <td class="px-6 py-4 text-center">
-                <div class="flex items-center justify-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                    ${row.Status !== 'Terverifikasi' ? `<button onclick="verifyAction(${row.row})" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-600 hover:text-white border border-green-200" title="Verif"><i class="fas fa-check"></i></button>` : ''}
-                    <button onclick="editAction(${row.row})" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                    <button onclick="deleteAction(${row.row})" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white border border-red-200" title="Hapus"><i class="fas fa-trash-alt"></i></button>
-                    <button onclick="handlePrintReceipt(${row.row})" class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-600 hover:text-white border border-purple-200" title="Kuitansi"><i class="fas fa-file-invoice"></i></button>
+                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${escapeHtml(row.MetodePembayaran) || '-'}</span>
+            </td>
+            <td class="px-6 py-4 text-center">
+                ${statusBadge}
+            </td>
+            <td class="px-6 py-4 text-right whitespace-nowrap">
+                <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
+
+                    ${verifyBtnHTML}
+                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${escapeHtml(row.row)}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
+                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${escapeHtml(row.row)}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
                 </div>
             </td>
         `;
         tableBodyEl.appendChild(tr);
-
-        // --- 2. RENDER MOBILE (CARD VIEW) ---
-        const cardHTML = `
-            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
-                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${row.Status === 'Terverifikasi' ? 'bg-green-500' : 'bg-yellow-500'}"></div>
-                <div class="pl-3">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <span class="text-[10px] text-slate-400 font-bold uppercase">${formatDate(row.Timestamp)}</span>
-                            <h4 class="font-bold text-slate-800">${row.NamaDonatur}</h4>
-                        </div>
-                        <span class="text-[10px] font-bold px-2 py-1 rounded uppercase ${statusClass}">${row.Status}</span>
-                    </div>
-                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-lg mb-3 border border-slate-100">
-                        <span class="font-black text-slate-800">${formatter.format(row.Nominal)}</span>
-                        <span class="text-xs font-bold text-slate-500">${row.MetodePembayaran}</span>
-                    </div>
-                    <div class="grid grid-cols-4 gap-2">
-                        ${row.Status !== 'Terverifikasi' ? `<button onclick="verifyAction(${row.row})" class="bg-green-50 text-green-700 py-2 rounded font-bold text-xs">Verif</button>` : ''}
-                        <button onclick="editAction(${row.row})" class="bg-blue-50 text-blue-700 py-2 rounded font-bold text-xs">Edit</button>
-                        <button onclick="handlePrintReceipt(${row.row})" class="bg-purple-50 text-purple-700 py-2 rounded font-bold text-xs">Kuitansi</button>
-                        <button onclick="deleteAction(${row.row})" class="bg-red-50 text-red-700 py-2 rounded font-bold text-xs">Hapus</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        mobileCardContainer.innerHTML += cardHTML;
     });
 
-    renderPagination();
-    updateBulkActionBar();
+    // Update Pagination Info
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    paginationInfoEl.textContent = `Halaman ${currentPage} / ${totalPages || 1}`;
+    paginationPrevBtn.disabled = currentPage === 1;
+    paginationNextBtn.disabled = currentPage === totalPages || totalPages === 0;
 }
 
-function renderPagination() {
-    const totalData = filteredData.length;
-    const totalPages = Math.ceil(totalData / rowsPerPage);
-    const start = (currentPage - 1) * rowsPerPage + 1;
-    const end = Math.min(currentPage * rowsPerPage, totalData);
-    
-    document.getElementById('pagination-info').textContent = totalData > 0 
-        ? `Menampilkan ${start}-${end} dari ${totalData}`
-        : 'Tidak ada data';
-        
-    document.getElementById('pagination-prev').disabled = currentPage === 1;
-    document.getElementById('pagination-next').disabled = currentPage === totalPages || totalPages === 0;
+function populateFilterDropdowns(data) {
+    const jenisSet = new Set();
+    const metodeSet = new Set();
+    data.forEach(row => {
+        if (row.JenisDonasi) jenisSet.add(row.JenisDonasi);
+        if (row.MetodePembayaran) metodeSet.add(row.MetodePembayaran);
+    });
+    filterJenisEl.innerHTML = '<option value="">Semua Jenis</option>';
+    filterMetodeEl.innerHTML = '<option value="">Semua Metode</option>';
+    jenisSet.forEach(val => filterJenisEl.add(new Option(val, val)));
+    metodeSet.forEach(val => filterMetodeEl.add(new Option(val, val)));
 }
 
-// =====================================================================
-// 6. ACTION LOGIC (VERIFY, EDIT, DELETE, PRINT)
-// =====================================================================
-
-window.verifyAction = function(row) {
-    showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
-        try {
-            await sendData({ action: 'verify', row: row });
-            showToast("Data berhasil diverifikasi!");
-            fetchData();
-        } catch (e) { showAppAlert(e.message, true); }
-    });
-};
-
-window.deleteAction = function(row) {
-    showAppConfirm("Hapus data ini secara permanen?", async () => {
-        try {
-            await sendData({ action: 'delete', row: row });
-            showToast("Data berhasil dihapus!");
-            fetchData();
-        } catch (e) { showAppAlert(e.message, true); }
-    });
-};
-
-window.editAction = function(row) {
-    const data = allDonationData.find(r => r.row === row);
-    if (!data) return;
-    
-    document.getElementById('edit-row-number').value = data.row;
-    
-    // Auto-fill form
-    const fields = ['JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'NoHP', 'Email', 'NoKTP', 'Alamat', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'PesanDoa'];
-    fields.forEach(f => {
-        const el = document.getElementById(`edit-${f}`);
-        if(el) el.value = data[f] || '';
-    });
-    
-    showModal(document.getElementById('edit-modal'));
-};
-
-document.getElementById('edit-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('edit-modal-save');
-    const originalText = document.getElementById('edit-save-text').textContent;
-    const loadIcon = document.getElementById('edit-save-loading');
-    
-    btn.disabled = true;
-    loadIcon.classList.remove('hidden');
-
-    try {
-        const row = document.getElementById('edit-row-number').value;
-        const payload = {};
-        
-        // Ambil data form
-        document.querySelectorAll('#edit-form input, #edit-form select, #edit-form textarea').forEach(input => {
-            const key = input.id.replace('edit-', '');
-            if (key && key !== 'row-number') payload[key] = input.value;
-        });
-
-        await sendData({ action: 'update', row: row, payload: payload });
-        
-        hideModal(document.getElementById('edit-modal'));
-        showToast("Data berhasil diperbarui!");
-        fetchData();
-    } catch (err) {
-        showAppAlert(err.message, true);
-    } finally {
-        btn.disabled = false;
-        loadIcon.classList.add('hidden');
-    }
-});
-
-// --- PRINT KUITANSI ---
-window.handlePrintReceipt = async function(rowNumber) {
-    const data = allDonationData.find(r => r.row === rowNumber);
-    if (!data) return;
-    
-    showToast("Menyiapkan PDF...", "info");
-    
-    // Mapping Data ke HTML Kuitansi
-    document.getElementById('rcpt-no').textContent = `KWT-${data.row}`;
-    document.getElementById('rcpt-nama').textContent = data.NamaDonatur;
-    document.getElementById('rcpt-total').textContent = formatter.format(data.Nominal);
-    document.getElementById('rcpt-terbilang-1').textContent = terbilang(data.Nominal) + " Rupiah";
-    
-    // Tgl
-    const date = new Date(data.Timestamp);
-    document.getElementById('rcpt-d1').innerText = String(date.getDate()).padStart(2, '0')[0];
-    document.getElementById('rcpt-d2').innerText = String(date.getDate()).padStart(2, '0')[1];
-    document.getElementById('rcpt-m1').innerText = String(date.getMonth()+1).padStart(2, '0')[0];
-    document.getElementById('rcpt-m2').innerText = String(date.getMonth()+1).padStart(2, '0')[1];
-    document.getElementById('rcpt-y1').innerText = String(date.getFullYear())[2];
-    document.getElementById('rcpt-y2').innerText = String(date.getFullYear())[3];
-
-    // Generate PDF
-    const element = document.getElementById('receipt-content');
-    const opt = {
-        margin: 0,
-        filename: `Kuitansi_${data.NamaDonatur}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
-    };
-    
-    try {
-        await html2pdf().set(opt).from(element).save();
-        showToast("PDF Berhasil diunduh!");
-    } catch (e) {
-        showToast("Gagal buat PDF: " + e.message, 'error');
-    }
-};
-
-// =====================================================================
-// 7. BULK ACTION & FILTER
-// =====================================================================
-
-window.toggleRowSelection = function(rowId, checkbox) {
-    if (checkbox.checked) selectedRows.add(rowId);
-    else selectedRows.delete(rowId);
-    updateBulkActionBar();
-};
-
-function updateBulkActionBar() {
-    const bar = document.getElementById('bulk-action-bar');
-    document.getElementById('selected-count').textContent = selectedRows.size;
-    
-    if (selectedRows.size > 0) bar.classList.remove('hidden');
-    else {
-        bar.classList.add('hidden');
-        const selectAll = document.getElementById('select-all');
-        if(selectAll) selectAll.checked = false;
-    }
-}
-
-document.getElementById('select-all')?.addEventListener('change', (e) => {
-    document.querySelectorAll('.row-checkbox').forEach(cb => {
-        cb.checked = e.target.checked;
-        const id = parseInt(cb.value);
-        e.target.checked ? selectedRows.add(id) : selectedRows.delete(id);
-    });
-    updateBulkActionBar();
-});
-
-window.verifySelected = async function() {
-    if(!confirm(`Verifikasi ${selectedRows.size} data sekaligus?`)) return;
-    
-    let successCount = 0;
-    for (let rowId of selectedRows) {
-        try {
-            await sendData({ action: 'verify', row: rowId });
-            successCount++;
-        } catch(e) { console.error(e); }
-    }
-    
-    selectedRows.clear();
-    updateBulkActionBar();
-    showToast(`${successCount} data berhasil diproses.`);
-    fetchData();
-};
-
-// --- FILTERING ---
 function applyFilters() {
-    const search = document.getElementById('filter-search').value.toLowerCase();
-    const status = document.getElementById('filter-status').value;
-    const jenis = document.getElementById('filter-jenis').value;
-    const metode = document.getElementById('filter-metode').value;
-    
+    const search = filterSearchEl.value.toLowerCase();
+    const status = filterStatusEl.value; // NEW
+    const jenis = filterJenisEl.value;
+    const metode = filterMetodeEl.value;
+    let from = filterDateFromEl.valueAsDate;
+    let to = filterDateToEl.valueAsDate;
+    if(from) from.setHours(0,0,0,0);
+    if(to) to.setHours(23,59,59,999);
+
     filteredData = allDonationData.filter(row => {
-        const matchesSearch = !search || (row.NamaDonatur && row.NamaDonatur.toLowerCase().includes(search));
-        const matchesStatus = !status || row.Status === status;
-        const matchesJenis = !jenis || row.JenisDonasi === jenis;
-        const matchesMetode = !metode || row.MetodePembayaran === metode;
-        return matchesSearch && matchesStatus && matchesJenis && matchesMetode;
+        const time = new Date(row.Timestamp);
+        const rowStatus = row.Status || "Belum Verifikasi"; // Default status
+
+        if (from && time < from) return false;
+        if (to && time > to) return false;
+        if (jenis && row.JenisDonasi !== jenis) return false;
+        if (metode && row.MetodePembayaran !== metode) return false;
+        
+        // Filter Status Logic
+        if (status && rowStatus !== status) return false;
+
+        if (search) {
+            const str = `${row.NamaDonatur || ''} ${row.NISSantri || ''} ${row.NoHP || ''} ${row.Email || ''} ${row.NamaSantri || ''}`.toLowerCase();
+            if (!str.includes(search)) return false;
+        }
+        return true;
     });
 
     calculateStatistics(filteredData);
@@ -480,154 +537,280 @@ function applyFilters() {
     renderTable();
 }
 
-function populateFilterDropdowns(data) {
-    const jenisSet = new Set(), metodeSet = new Set();
-    data.forEach(row => {
-        if(row.JenisDonasi) jenisSet.add(row.JenisDonasi);
-        if(row.MetodePembayaran) metodeSet.add(row.MetodePembayaran);
+function resetFilters() {
+    filterSearchEl.value = ''; filterStatusEl.value = ''; filterJenisEl.value = ''; filterMetodeEl.value = '';
+    filterDateFromEl.value = ''; filterDateToEl.value = '';
+    applyFilters();
+}
+
+function openEditModal(rowNumber) {
+    const data = allDonationData.find(r => r.row === rowNumber);
+    if (!data) return;
+    document.getElementById('edit-row-number').value = data.row;
+    const fields = ['JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'NoHP', 'Email', 'NoKTP', 'Alamat', 'TipeDonatur', 'DetailAlumni', 'NamaSantri', 'NISSantri', 'KelasSantri', 'PesanDoa'];
+    fields.forEach(f => { const el = document.getElementById(`edit-${f}`); if(el) el.value = data[f] || ''; });
+    showModal(editModal);
+}
+
+async function handleEditSubmit(e) {
+    e.preventDefault();
+    const btn = document.getElementById('edit-modal-save');
+    const txt = document.getElementById('edit-save-text');
+    const load = document.getElementById('edit-save-loading');
+    
+    // Aktifkan status loading pada tombol
+    btn.disabled = true; 
+    txt.classList.add('hidden'); 
+    load.classList.remove('hidden');
+
+    const rowNumber = document.getElementById('edit-row-number').value;
+    const payload = {};
+    const inputs = editForm.querySelectorAll('input, select, textarea');
+    
+    // Mengumpulkan data dari form modal edit
+    inputs.forEach(input => {
+        const key = input.id.replace('edit-', '');
+        if (key && key !== 'row-number') payload[key] = input.value;
     });
-    
-    const jenisSel = document.getElementById('filter-jenis');
-    const metodeSel = document.getElementById('filter-metode');
-    jenisSel.length = 1; metodeSel.length = 1;
-    jenisSet.forEach(v => jenisSel.add(new Option(v, v)));
-    metodeSet.forEach(v => metodeSel.add(new Option(v, v)));
+
+    try {
+        // --- PERBAIKAN UTAMA: AMBIL TOKEN DARI FIREBASE ---
+        const user = auth.currentUser;
+        if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
+        
+        // Mengambil Token ID (KTP Digital) untuk dikirim ke GAS
+        const token = await user.getIdToken();
+
+        // Kirim data ke Google Apps Script API
+        const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "update", 
+                row: rowNumber, 
+                payload: payload,
+                authToken: token // WAJIB disertakan agar tidak ditolak oleh GAS
+            })
+        });
+
+        const res = await response.json();
+        
+        if(res.status !== 'success') {
+            throw new Error(res.message);
+        }
+        
+        // Jika berhasil
+        hideModal(editModal);
+        showAppAlert("Data berhasil diperbarui!");
+        fetchData(); // Refresh tabel agar data terbaru muncul
+
+    } catch (err) {
+        console.error("Edit error:", err);
+        showAppAlert("Gagal menyimpan: " + err.message, true);
+    } finally {
+        // Kembalikan status tombol ke normal
+        btn.disabled = false; 
+        txt.classList.remove('hidden'); 
+        load.classList.add('hidden');
+    }
 }
 
-function calculateStatistics(data) {
-    let total = 0, count = data.length, todayTotal = 0;
-    const todayStr = new Date().toDateString();
-    
-    data.forEach(row => {
-        const val = parseFloat(row.Nominal) || 0;
-        total += val;
-        if(new Date(row.Timestamp).toDateString() === todayStr) todayTotal += val;
+async function executeDelete(rowNumber) {
+    try {
+        const user = auth.currentUser;
+        if (!user) throw new Error("Silakan login kembali.");
+
+        // Ambil token terbaru
+        const token = await user.getIdToken(true); 
+
+        const response = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "delete", 
+                row: rowNumber,
+                authToken: token 
+            })
+        });
+
+        const res = await response.json();
+        if (res.status !== 'success') throw new Error(res.message);
+        
+        showAppAlert("Data berhasil dihapus."); 
+        fetchData();
+    } catch (err) {
+        showAppAlert("Gagal menghapus: " + err.message, true);
+    }
+}
+
+function exportToCSV() {
+    if (filteredData.length === 0) return showAppAlert("Tidak ada data untuk diekspor", true);
+    const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa', 'Status'];
+    const csvRows = [keys.join(',')];
+    filteredData.forEach(row => {
+        const values = keys.map(key => {
+            let val = row[key] || ''; val = String(val).replace(/"/g, '""'); return `"${val}"`;
+        });
+        csvRows.push(values.join(','));
     });
-    
-    document.getElementById('admin-stat-total').textContent = formatter.format(total);
-    document.getElementById('admin-stat-donatur').textContent = count;
-    document.getElementById('admin-stat-hari-ini').textContent = formatter.format(todayTotal);
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.setAttribute('hidden', ''); a.setAttribute('href', url);
+    a.setAttribute('download', `rekap_donasi_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-// =====================================================================
-// 8. UTILITIES (HELPERS)
-// =====================================================================
+// === NEW: LOGIC CETAK KUITANSI ===
 
-function showToast(msg, type='success') {
-    const container = document.getElementById('toast-container');
-    const div = document.createElement('div');
-    const color = type === 'success' ? 'border-green-500' : 'border-red-500';
-    const icon = type === 'success' ? 'fa-check' : 'fa-times';
-    
-    div.className = `bg-white border-l-4 ${color} px-4 py-3 rounded shadow-lg flex items-center gap-3 transform translate-y-10 opacity-0 transition-all duration-300`;
-    div.innerHTML = `<i class="fas ${icon}"></i> <div><div class="font-bold text-sm capitalize">${type}</div><div class="text-xs">${msg}</div></div>`;
-    
-    container.appendChild(div);
-    requestAnimationFrame(() => div.classList.remove('translate-y-10', 'opacity-0'));
-    setTimeout(() => {
-        div.classList.add('translate-y-10', 'opacity-0');
-        setTimeout(() => div.remove(), 300);
-    }, 3000);
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return isNaN(date) ? dateString : new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(date);
-}
-
-function formatTime(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return isNaN(date) ? '' : new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(date);
-}
-
+// Fungsi Konversi Angka ke Terbilang
 function terbilang(nilai) {
     nilai = Math.abs(nilai);
-    const huruf = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
-    let temp = "";
-    if (nilai < 12) temp = " " + huruf[nilai];
-    else if (nilai < 20) temp = terbilang(nilai - 10) + " Belas";
-    else if (nilai < 100) temp = terbilang(Math.floor(nilai / 10)) + " Puluh" + terbilang(nilai % 10);
-    else if (nilai < 200) temp = " Seratus" + terbilang(nilai - 100);
-    else if (nilai < 1000) temp = terbilang(Math.floor(nilai / 100)) + " Ratus" + terbilang(nilai % 100);
-    else if (nilai < 2000) temp = " Seribu" + terbilang(nilai - 1000);
-    else if (nilai < 1000000) temp = terbilang(Math.floor(nilai / 1000)) + " Ribu" + terbilang(nilai % 1000);
-    else if (nilai < 1000000000) temp = terbilang(Math.floor(nilai / 1000000)) + " Juta" + terbilang(nilai % 1000000);
+    var huruf = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+    var temp = "";
+    if (nilai < 12) { temp = " " + huruf[nilai]; }
+    else if (nilai < 20) { temp = terbilang(nilai - 10) + " Belas"; }
+    else if (nilai < 100) { temp = terbilang(Math.floor(nilai / 10)) + " Puluh" + terbilang(nilai % 10); }
+    else if (nilai < 200) { temp = " Seratus" + terbilang(nilai - 100); }
+    else if (nilai < 1000) { temp = terbilang(Math.floor(nilai / 100)) + " Ratus" + terbilang(nilai % 100); }
+    else if (nilai < 2000) { temp = " Seribu" + terbilang(nilai - 1000); }
+    else if (nilai < 1000000) { temp = terbilang(Math.floor(nilai / 1000)) + " Ribu" + terbilang(nilai % 1000); }
+    else if (nilai < 1000000000) { temp = terbilang(Math.floor(nilai / 1000000)) + " Juta" + terbilang(nilai % 1000000); }
     return temp.trim();
 }
 
-function showModal(el) {
-    el.classList.remove('hidden');
-    setTimeout(() => {
-        el.classList.remove('opacity-0');
-        el.querySelector('.modal-content').classList.remove('scale-95');
-    }, 10);
-}
+// Fungsi Utama Cetak Kuitansi (Hanya Download Lokal)
+async function handlePrintReceipt(rowNumber) {
+    const data = allDonationData.find(r => r.row === rowNumber);
+    if (!data) return;
 
-function hideModal(el) {
-    el.classList.add('opacity-0');
-    el.querySelector('.modal-content').classList.add('scale-95');
-    setTimeout(() => el.classList.add('hidden'), 300);
-}
+    showAppAlert("Sedang membuat PDF...", false);
+    
+    // 1. ISI DATA KE TEMPLATE (Mapping Data)
+    const dateObj = new Date(data.Timestamp);
+    const nominal = parseFloat(data.Nominal) || 0;
+    
+    // Format Tanggal (Pecah per digit untuk kotak-kotak)
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = String(dateObj.getFullYear());
 
-function showAppConfirm(msg, callback) {
-    const modal = document.getElementById('confirm-modal');
-    document.getElementById('confirm-modal-message').textContent = msg;
-    const okBtn = document.getElementById('confirm-modal-ok');
+    const terbilangEl = document.getElementById('rcpt-terbilang-1');
+    const terbilang2El = document.getElementById('rcpt-terbilang-2');
+
+    document.getElementById('rcpt-no').innerText = `KL-${data.row}`; // Contoh No Kuitansi
+    document.getElementById('rcpt-d1').innerText = d[0]; document.getElementById('rcpt-d2').innerText = d[1];
+    document.getElementById('rcpt-m1').innerText = m[0]; document.getElementById('rcpt-m2').innerText = m[1];
+    document.getElementById('rcpt-y1').innerText = y[2]; document.getElementById('rcpt-y2').innerText = y[3];
+
+    document.getElementById('rcpt-nama').innerText = data.NamaDonatur || 'Hamba Allah';
+    document.getElementById('rcpt-alamat').innerText = data.Alamat || '-';
+    document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
+    document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
+
+    // Clear All Nominal Fields
+    const nominalFields = ['zakat', 'infaq', 'lain'];
+    nominalFields.forEach(k => {
+        document.getElementById(`rcpt-jenis-${k}`).innerText = '';
+        document.getElementById(`rcpt-nom-${k}`).innerText = '';
+    });
+
+    // Logic Penempatan Nominal
+    const fmtNominal = formatter.format(nominal);
+    const jenis = (data.JenisDonasi || '').toLowerCase();
     
-    // Reset listener agar tidak double execution
-    const newOkBtn = okBtn.cloneNode(true);
-    okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+    // Cek Nominal (Hanya Rp 1.000.249)
+    // Nominal dicetak sekali saja di kolom yang relevan.
+    if(jenis.includes('zakat')) {
+        document.getElementById('rcpt-jenis-zakat').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-zakat').innerText = fmtNominal;
+    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) { // Menangkap 'Infaq/Shadaqah'ndidikan'
+        document.getElementById('rcpt-jenis-infaq').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-infaq').innerText = fmtNominal;
+    } else {
+        document.getElementById('rcpt-jenis-lain').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-nom-lain').innerText = fmtNominal;
+    }
     
-    newOkBtn.onclick = () => {
-        callback();
-        hideModal(modal);
+    // Nominal Total
+    document.getElementById('rcpt-total').innerText = fmtNominal;
+    
+    // Checkbox Logic
+    document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
+    document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
+    document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
+    document.getElementById('rcpt-chk-wesel').innerText = ''; // Clear Wesel
+
+    // Set Terbilang
+    const textTerbilang = terbilang(nominal) + " Rupiah";
+    terbilangEl.innerText = textTerbilang;
+    terbilang2El.innerText = ''; // Pastikan baris kedua kosong secara default
+    
+    // Penyesuaian Font Size jika Terlalu Panjang (Pencegahan Overflow)
+    // Jika lebih dari 50 karakter, kecilkan font
+    terbilangEl.style.fontSize = '14pt'; 
+    if (textTerbilang.length > 50) {
+        terbilangEl.style.fontSize = '12pt';
+    }
+    if (textTerbilang.length > 65) {
+        terbilangEl.style.fontSize = '10pt';
+    }
+
+
+    // 2. GENERATE PDF & DOWNLOAD LOKAL
+    const element = document.getElementById('receipt-content');
+    const opt = {
+        margin: 0,
+        filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
+        html2canvas: { scale: 2, useCORS: true }, // Scale 2 sudah cukup tajam & lebih ringan
+        jsPDF: { unit: 'mm', format: 'a5', orientation: 'landscape' }
     };
-    showModal(modal);
+
+    try {
+        await html2pdf().set(opt).from(element).save();
+        
+        // --- PERBAIKAN: Ambil Token sebelum lapor ke server ---
+        const user = auth.currentUser;
+        if (user) {
+            const token = await user.getIdToken(); // Ambil token
+            
+            // Panggil server dengan membawa Token
+            await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    action: "sendReceipt",
+                    authToken: token // <--- Token wajib disertakan!
+                })
+            });
+        }
+        
+        showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh! Silakan cek folder Download Anda.`, false);
+
+    } catch (err) {
+        showAppAlert("Gagal Generate PDF: " + err.message, true);
+    } finally {
+        // Reset font size setelah selesai
+        terbilangEl.style.fontSize = '14pt';
+    }
 }
 
-function showAppAlert(msg, isError) {
-    document.getElementById('alert-modal-title').textContent = isError ? "Kesalahan" : "Berhasil";
-    document.getElementById('alert-modal-message').textContent = msg;
-    showModal(document.getElementById('alert-modal'));
-}
 
-// =====================================================================
-// 9. EVENT LISTENERS
-// =====================================================================
-document.getElementById('refresh-button').addEventListener('click', fetchData);
-document.getElementById('filter-apply-button').addEventListener('click', applyFilters);
-document.getElementById('filter-reset-button').addEventListener('click', () => {
-    document.getElementById('filter-search').value = '';
-    document.getElementById('filter-status').value = '';
-    applyFilters();
-});
+// Event Listeners
+refreshButton.addEventListener('click', fetchData);
+filterApplyBtn.addEventListener('click', applyFilters);
+filterResetBtn.addEventListener('click', resetFilters);
+exportCsvBtn.addEventListener('click', exportToCSV);
+editForm.addEventListener('submit', handleEditSubmit);
+paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
+paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
+paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
 
-// Modal Close Triggers
-document.getElementById('alert-modal-close').onclick = () => hideModal(document.getElementById('alert-modal'));
-document.getElementById('confirm-modal-cancel').onclick = () => hideModal(document.getElementById('confirm-modal'));
-document.getElementById('edit-modal-cancel').onclick = () => hideModal(document.getElementById('edit-modal'));
-document.getElementById('edit-modal-close').onclick = () => hideModal(document.getElementById('edit-modal'));
-
-// Pagination Controls
-document.getElementById('pagination-prev').addEventListener('click', () => {
-    if(currentPage > 1) { currentPage--; renderTable(); }
-});
-document.getElementById('pagination-next').addEventListener('click', () => {
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    if(currentPage < totalPages) { currentPage++; renderTable(); }
-});
-document.getElementById('pagination-rows').addEventListener('change', (e) => {
-    rowsPerPage = parseInt(e.target.value);
-    currentPage = 1;
-    renderTable();
-});
-
-// Validasi Input Real-time
-document.getElementById('edit-Nominal')?.addEventListener('input', function(e) {
-    const val = parseFloat(e.target.value);
-    const err = document.getElementById('err-nominal');
-    if(val < 0 || isNaN(val)) err?.classList.remove('hidden');
-    else err?.classList.add('hidden');
+// Delegate Click Actions
+tableWrapperEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const row = parseInt(btn.dataset.row);
+    if (btn.classList.contains('verify-btn')) verifyDonation(row);
+    if (btn.classList.contains('edit-btn')) openEditModal(row);
+    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
+    // Handle Print Button
+    if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
 });
