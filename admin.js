@@ -280,20 +280,15 @@ async function fetchData() {
     refreshIcon.classList.add('fa-spin');
 
     try {
-        // Ambil user dan token untuk autentikasi
+        // Cek login di sisi Frontend (User Interface)
         const user = auth.currentUser;
         if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
         
-        const token = await user.getIdToken();
+        // --- PERBAIKAN DI SINI ---
+        // Kembali menggunakan GET Request karena Code.gs belum support POST "fetch"
+        // Kita tidak mengirim token ke backend untuk aksi ini agar tidak error "Invalid action"
+        const response = await fetch(GAS_API_URL); 
         
-        // Kirim request dengan token autentikasi
-        const response = await fetch(GAS_API_URL, {
-            method: 'POST',
-            body: JSON.stringify({ 
-                action: "fetch",
-                authToken: token
-            })
-        });
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
@@ -303,14 +298,13 @@ async function fetchData() {
 
     } catch (error) {
         console.error("Fetch error:", error);
-        // Gunakan pesan error yang user-friendly, jangan expose raw error
+        
         let errorMessage = "Tidak dapat memuat data. Periksa koneksi internet Anda.";
         
-        // Hanya tampilkan error.message jika aman (tidak mengandung info sensitif)
         if (error.message && 
-            !error.message.includes("6Le") && // ReCaptcha sitekey
-            !error.message.includes("://") && // URLs/endpoints (protocol separator)
-            error.message.length < 100) { // Hindari pesan error yang terlalu panjang
+            !error.message.includes("6Le") && 
+            !error.message.includes("://") && 
+            error.message.length < 100) { 
             errorMessage = "Gagal memuat data: " + error.message;
         }
         showAppAlert(errorMessage, true);
