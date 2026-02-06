@@ -182,6 +182,7 @@ const tableWrapperEl = document.getElementById('admin-table-wrapper');
 const tableBodyEl = document.getElementById('table-body');
 const refreshButton = document.getElementById('refresh-button');
 const refreshIcon = document.getElementById('refresh-icon');
+const contentEl = document.getElementById('admin-content'); // <-- TAMBAHKAN INI
 
 // Statistik Elements
 const statTotalEl = document.getElementById('admin-stat-total');
