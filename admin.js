@@ -118,6 +118,7 @@ window.logout = function() {
 onAuthStateChanged(auth, (user) => {
     const overlay = document.getElementById('login-overlay');
     const errorMsg = document.getElementById('login-error');
+    const contentEl = document.getElementById('admin-content');
     
     if (user) {
         // VALIDASI KEAMANAN GANDA: Pastikan email user yang login adalah email admin yang diizinkan
@@ -141,18 +142,16 @@ onAuthStateChanged(auth, (user) => {
         }
         
         // JIKA USER LOGIN (KUNCI COCOK) DAN EMAIL SESUAI
-        console.log("Admin terautentikasi");
         overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
 
-        if(contentEl) contentEl.classList.remove('hidden'); // <-- TAMBAHKAN BARIS INI
+        if(contentEl) contentEl.classList.remove('hidden');
         
         // Panggil fungsi ambil data Anda yang lama
         fetchData(); 
     } else {
         // JIKA TIDAK LOGIN / BELUM LOGIN
-        console.log("Belum login");
         overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
-        if(contentEl) contentEl.classList.add('hidden'); // <-- TAMBAHKAN BARIS INI
+        if(contentEl) contentEl.classList.add('hidden');
     }
 });
 
@@ -185,7 +184,6 @@ const tableWrapperEl = document.getElementById('admin-table-wrapper');
 const tableBodyEl = document.getElementById('table-body');
 const refreshButton = document.getElementById('refresh-button');
 const refreshIcon = document.getElementById('refresh-icon');
-const contentEl = document.getElementById('admin-content'); // <-- TAMBAHKAN INI
 
 // Statistik Elements
 const statTotalEl = document.getElementById('admin-stat-total');
@@ -760,9 +758,10 @@ async function handlePrintReceipt(rowNumber) {
 
     // 2. GENERATE PDF & DOWNLOAD LOKAL
     const element = document.getElementById('receipt-content');
+    const sanitizedName = (data.NamaDonatur || 'Donatur').replace(/\s/g, '_');
     const opt = {
         margin: 0,
-        filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
+        filename: `Kuitansi_Lazismu_${data.row}_${sanitizedName}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
         html2canvas: { scale: 2, useCORS: true }, // Scale 2 sudah cukup tajam & lebih ringan
