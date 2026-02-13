@@ -823,7 +823,7 @@ paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filter
 tableWrapperEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
     const rowNumber = parseInt(btn.dataset.row);  // Gunakan data-row untuk row number
-    if (!rowNumber) return;
+    if (isNaN(rowNumber) || rowNumber < 1) return;
     
     if (btn.classList.contains('verify-btn')) verifyDonation(rowNumber);
     if (btn.classList.contains('edit-btn')) openEditModal(rowNumber);

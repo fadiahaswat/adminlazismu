@@ -22,6 +22,11 @@ const SHEET_KUITANSI = "DataKuitansi";
 const RECAPTCHA_SECRET_KEY = "6LdhLGIsAAAAABVKoyyNjpCjIt8z_eF54m1NyUQm";
 const RECAPTCHA_THRESHOLD = 0.2;
 
+// Column structure constants
+const STATUS_COLUMN = 16;  // Column P
+const DATA_START_COLUMN = 2;  // Column B (after Timestamp)
+const DATA_COLUMN_COUNT = 14;  // Columns B-O
+
 // SAKLAR PENGATURAN (TRUE = Bypass Captcha Aktif, FALSE = Wajib Captcha)
 // Ganti menjadi FALSE saat website sudah rilis untuk publik!
 const BYPASS_RECAPTCHA = true; 
@@ -165,8 +170,8 @@ function createData(payload) {
     "Belum Verifikasi"          // P: Status
   ];
   
-  const row = sheet.getLastRow() + 1;
   sheet.appendRow(rowData);
+  const row = sheet.getLastRow();
   return { message: "Data berhasil disimpan.", row: row };
 }
 
@@ -204,8 +209,8 @@ function readData() {
 function verifyData(rowNumber) {
   const sheet = getSheet();
   
-  // Update kolom P (16) dengan status "Terverifikasi"
-  sheet.getRange(rowNumber, 16).setValue("Terverifikasi");
+  // Update kolom P (STATUS_COLUMN) dengan status "Terverifikasi"
+  sheet.getRange(rowNumber, STATUS_COLUMN).setValue("Terverifikasi");
   return { message: "Data berhasil diverifikasi." };
 }
 
@@ -230,8 +235,8 @@ function updateData(rowNumber, p) {
     p.doa || ""
   ]];
   
-  // Update 14 kolom mulai dari Kolom ke-2 (B)
-  sheet.getRange(rowNumber, 2, 1, 14).setValues(values);
+  // Update DATA_COLUMN_COUNT kolom mulai dari DATA_START_COLUMN (B)
+  sheet.getRange(rowNumber, DATA_START_COLUMN, 1, DATA_COLUMN_COUNT).setValues(values);
   return { message: "Data berhasil diperbarui." };
 }
 
