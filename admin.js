@@ -5,25 +5,25 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 // [BARU] Import App Check
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
-// --- KONFIGURASI KUNCI RAHASIA (PASTE CONFIG ANDA DI SINI) ---
+// --- IMPORT UTILITIES ---
+import { escapeHtml, formatRupiah, formatDate } from './src/utils/format.js';
+
+// --- IMPORT CONSTANTS ---
+import { 
+    FIREBASE_CONFIG, 
+    RECAPTCHA_SITE_KEY, 
+    ALLOWED_ADMIN_EMAILS, 
+    GAS_API_URL, 
+    BTN_LOGIN_GOOGLE_HTML 
+} from './src/constants.js';
+
+// --- KONFIGURASI KUNCI RAHASIA ---
 // PERINGATAN KEAMANAN: API Key ini bersifat publik dan seharusnya dibatasi melalui 
 // Firebase Console > Project Settings > API restrictions untuk domain yang diizinkan
-const firebaseConfig = {
-  apiKey: "AIzaSyAWPIcS8h3kE6kJYBxjeVFdSprgrMzOFo8",
-  authDomain: "lazismu-auth.firebaseapp.com",
-  projectId: "lazismu-auth",
-  storageBucket: "lazismu-auth.firebasestorage.app",
-  messagingSenderId: "398570239500",
-  appId: "1:398570239500:web:0b3e96109a4bf304ebe029"
-};
+const firebaseConfig = FIREBASE_CONFIG;
 
 // --- KONFIGURASI KEAMANAN ---
 // Email yang diizinkan untuk login ke admin dashboard
-const ALLOWED_ADMIN_EMAILS = [
-    "lazismumuallimin@gmail.com",
-    "ad.lazismumuallimin@gmail.com",
-    "andiaqillahfadiahaswat@gmail.com"
-];
 const ALLOWED_ADMIN_EMAILS_LOWER = ALLOWED_ADMIN_EMAILS.map(email => email.toLowerCase());
 
 // --- NYALAKAN APLIKASI ---
@@ -33,7 +33,7 @@ const app = initializeApp(firebaseConfig);
 let appCheck;
 try {
   appCheck = initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider('6LeXJmAsAAAAAJzjGF8E3oVbviXI_5BeEZYjy_hP'),
+    provider: new ReCaptchaV3Provider(RECAPTCHA_SITE_KEY),
     isTokenAutoRefreshEnabled: true
   });
 } catch (error) {
@@ -43,12 +43,6 @@ try {
 
 // --- NYALAKAN AUTH ---
 const auth = getAuth(app);
-
-// URL API GOOGLE SHEET (TETAP SAMA)
-const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
-
-// Konstanta untuk button HTML (untuk konsistensi)
-const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
 
 // --- FUNGSI LOGIN (PINTU MASUK) ---
 // Google Sign-In untuk admin yang terotorisasi
@@ -159,24 +153,6 @@ onAuthStateChanged(auth, (user) => {
 // BATAS SUCI: KODE DI BAWAH INI ADALAH KODE LAMA ANDA (VARIABLES, DST)
 // JANGAN DIHAPUS, BIARKAN SAJA MENYAMBUNG DI BAWAH SINI
 // ================================================================
-
-// === SECURITY UTILITIES ===
-/**
- * Fungsi untuk escape HTML special characters mencegah XSS attacks
- * @param {string} text - Text yang akan di-escape
- * @returns {string} - Text yang sudah aman dari XSS
- */
-function escapeHtml(text) {
-    if (text == null) return '';
-    const map = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    };
-    return String(text).replace(/[&<>"']/g, m => map[m]);
-}
 
 // === VARIABLES ===
 const loadingEl = document.getElementById('admin-loading');
