@@ -288,15 +288,14 @@ async function fetchData() {
         const user = auth.currentUser;
         if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
         
-        // --- PERBAIKAN DI SINI ---
-        // Kembali menggunakan GET Request karena Code.gs belum support POST "fetch"
-        // Kita tidak mengirim token ke backend untuk aksi ini agar tidak error "Invalid action"
+        // Fetch data dengan GET request (UUID-based backend)
         const response = await fetch(GAS_API_URL); 
         
         const result = await response.json();
         if (result.status !== "success") throw new Error(result.message);
         
-        allDonationData = result.data.sort((a, b) => b.row - a.row);
+        // Sort berdasarkan Timestamp (terbaru di atas)
+        allDonationData = result.data.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
         populateFilterDropdowns(allDonationData);
         applyFilters();
 
@@ -318,21 +317,15 @@ async function fetchData() {
     }
 }
 
-async function verifyDonation(rowNumber) {
+async function verifyDonation(idTransaksi) {
     showAppConfirm("Verifikasi donasi ini? Pastikan dana sudah masuk.", async () => {
         try {
-            // 1. Ambil User & Token
-            const user = auth.currentUser;
-            if (!user) throw new Error("Sesi habis, silakan login ulang.");
-            const token = await user.getIdToken(); // <--- INI KUNCINYA
-
-            // 2. Kirim ke Backend dengan Token
+            // Kirim ke Backend dengan UUID
             const response = await fetch(GAS_API_URL, {
                 method: 'POST',
                 body: JSON.stringify({ 
                     action: "verify", 
-                    row: rowNumber,
-                    authToken: token // <--- Token diselipkan di sini
+                    id: idTransaksi  // Gunakan 'id' untuk UUID
                 })
             });
             
@@ -358,7 +351,7 @@ function calculateStatistics(data) {
     const typeCounts = {};
 
     data.forEach(row => {
-        const val = parseFloat(row.Nominal) || 0;
+        const val = parseFloat(row.nominal) || 0;  // Gunakan 'nominal' bukan 'Nominal'
         total += val;
         if (val > maxVal) maxVal = val;
         
@@ -366,7 +359,7 @@ function calculateStatistics(data) {
             todayTotal += val;
         }
 
-        const type = row.JenisDonasi || 'Lainnya';
+        const type = row.type || 'Lainnya';  // Gunakan 'type' bukan 'JenisDonasi'
         typeCounts[type] = (typeCounts[type] || 0) + 1;
     });
 
@@ -417,10 +410,10 @@ function renderTable() {
         let detailInfo = '';
         let badgeTipe = 'bg-slate-100 text-slate-500';
         
-        if (row.TipeDonatur === 'santri') {
+        if (row.donaturTipe === 'santri') {
             badgeTipe = 'bg-orange-100 text-orange-600';
-            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${escapeHtml(row.NamaSantri) || '-'}</div>`;
-        } else if (row.TipeDonatur === 'alumni') {
+            detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-child"></i> ${escapeHtml(row.namaSantri) || '-'}</div>`;
+        } else if (row.donaturTipe === 'alumni') {
             badgeTipe = 'bg-blue-100 text-blue-600';
             detailInfo = `<div class="text-xs text-slate-500 mt-0.5"><i class="fas fa-graduation-cap"></i> Angkatan ${escapeHtml(row.DetailAlumni) || '-'}</div>`;
         } else {
@@ -428,14 +421,14 @@ function renderTable() {
         }
 
         let methodColor = 'bg-slate-100 text-slate-500';
-        if(row.MetodePembayaran === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
-        if(row.MetodePembayaran === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
-        if(row.MetodePembayaran === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
+        if(row.metode === 'QRIS') methodColor = 'bg-blue-50 text-blue-600 border-blue-100';
+        if(row.metode === 'Transfer') methodColor = 'bg-purple-50 text-purple-600 border-purple-100';
+        if(row.metode === 'Tunai') methodColor = 'bg-green-50 text-green-600 border-green-100';
 
         // Highlight Kode Unik
-        const nominalVal = parseFloat(row.Nominal) || 0;
+        const nominalVal = parseFloat(row.nominal) || 0;
         let nominalHTML = formatter.format(nominalVal);
-        if (nominalVal % 1000 !== 0 && row.MetodePembayaran !== 'Tunai') {
+        if (nominalVal % 1000 !== 0 && row.metode !== 'Tunai') {
             nominalHTML = nominalHTML.replace(/(\d{3})(?=\D*$)/, '<span class="text-orange-500 border-b-2 border-orange-200 font-extrabold">$1</span>');
         }
 
@@ -448,7 +441,7 @@ function renderTable() {
             statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 border border-green-200"><i class="fas fa-check-circle"></i> Verified</span>`;
         } else {
             statusBadge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200"><i class="fas fa-clock"></i> Pending</span>`;
-            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-row="${escapeHtml(row.row)}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
+            verifyBtnHTML = `<button class="verify-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center shadow-sm border border-green-100 mr-2" data-id="${escapeHtml(row.idTransaksi)}" title="Verifikasi"><i class="fas fa-check text-xs"></i></button>`;
         }
 
         tr.innerHTML = `
@@ -457,30 +450,30 @@ function renderTable() {
                 <span class="text-xs text-slate-400">${timeStr}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="font-bold text-slate-800 block">${escapeHtml(row.NamaDonatur) || 'Hamba Allah'}</span>
-                <span class="text-xs text-slate-400 block">${escapeHtml(row.NoHP) || '-'}</span>
+                <span class="font-bold text-slate-800 block">${escapeHtml(row.nama) || 'Hamba Allah'}</span>
+                <span class="text-xs text-slate-400 block">${escapeHtml(row.hp) || '-'}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${escapeHtml(row.TipeDonatur) || 'Umum'}</span>
-                <div class="text-xs font-semibold text-slate-600">${escapeHtml(row.JenisDonasi)}</div>
+                <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase mb-1 ${badgeTipe}">${escapeHtml(row.donaturTipe) || 'Umum'}</span>
+                <div class="text-xs font-semibold text-slate-600">${escapeHtml(row.type)}</div>
                 ${detailInfo}
             </td>
             <td class="px-6 py-4 text-right">
                 <span class="font-black text-slate-800 text-sm">${nominalHTML}</span>
             </td>
             <td class="px-6 py-4 text-center">
-                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${escapeHtml(row.MetodePembayaran) || '-'}</span>
+                <span class="px-2 py-1 rounded border text-[10px] font-bold uppercase ${methodColor}">${escapeHtml(row.metode) || '-'}</span>
             </td>
             <td class="px-6 py-4 text-center">
                 ${statusBadge}
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
+                    <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-id="${escapeHtml(row.idTransaksi)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
 
                     ${verifyBtnHTML}
-                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-row="${escapeHtml(row.row)}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
-                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-row="${escapeHtml(row.row)}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <button class="edit-btn w-8 h-8 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white transition flex items-center justify-center mr-2" data-id="${escapeHtml(row.idTransaksi)}" title="Edit"><i class="fas fa-pencil-alt text-xs"></i></button>
+                    <button class="delete-btn w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center" data-id="${escapeHtml(row.idTransaksi)}" title="Hapus"><i class="fas fa-trash-alt text-xs"></i></button>
                 </div>
             </td>
         `;
@@ -498,8 +491,8 @@ function populateFilterDropdowns(data) {
     const jenisSet = new Set();
     const metodeSet = new Set();
     data.forEach(row => {
-        if (row.JenisDonasi) jenisSet.add(row.JenisDonasi);
-        if (row.MetodePembayaran) metodeSet.add(row.MetodePembayaran);
+        if (row.type) jenisSet.add(row.type);  // Gunakan 'type' bukan 'JenisDonasi'
+        if (row.metode) metodeSet.add(row.metode);  // Gunakan 'metode' bukan 'MetodePembayaran'
     });
     filterJenisEl.innerHTML = '<option value="">Semua Jenis</option>';
     filterMetodeEl.innerHTML = '<option value="">Semua Metode</option>';
@@ -523,14 +516,14 @@ function applyFilters() {
 
         if (from && time < from) return false;
         if (to && time > to) return false;
-        if (jenis && row.JenisDonasi !== jenis) return false;
-        if (metode && row.MetodePembayaran !== metode) return false;
+        if (jenis && row.type !== jenis) return false;  // Gunakan 'type' bukan 'JenisDonasi'
+        if (metode && row.metode !== metode) return false;  // Gunakan 'metode' bukan 'MetodePembayaran'
         
         // Filter Status Logic
         if (status && rowStatus !== status) return false;
 
         if (search) {
-            const str = `${row.NamaDonatur || ''} ${row.NISSantri || ''} ${row.NoHP || ''} ${row.Email || ''} ${row.NamaSantri || ''}`.toLowerCase();
+            const str = `${row.nama || ''} ${row.nisSantri || ''} ${row.hp || ''} ${row.email || ''} ${row.namaSantri || ''}`.toLowerCase();
             if (!str.includes(search)) return false;
         }
         return true;
@@ -547,12 +540,34 @@ function resetFilters() {
     applyFilters();
 }
 
-function openEditModal(rowNumber) {
-    const data = allDonationData.find(r => r.row === rowNumber);
+function openEditModal(idTransaksi) {
+    const data = allDonationData.find(r => r.idTransaksi === idTransaksi);
     if (!data) return;
-    document.getElementById('edit-row-number').value = data.row;
-    const fields = ['JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'NoHP', 'Email', 'NoKTP', 'Alamat', 'TipeDonatur', 'DetailAlumni', 'NamaSantri', 'NISSantri', 'KelasSantri', 'PesanDoa'];
-    fields.forEach(f => { const el = document.getElementById(`edit-${f}`); if(el) el.value = data[f] || ''; });
+    document.getElementById('edit-row-number').value = data.idTransaksi;  // Store UUID instead of row
+    
+    // Map new field names to old form field IDs for backward compatibility
+    const fieldMapping = {
+        'JenisDonasi': data.type,
+        'Nominal': data.nominal,
+        'MetodePembayaran': data.metode,
+        'NamaDonatur': data.nama,
+        'NoHP': data.hp,
+        'Email': data.email,
+        'NoKTP': data.NoKTP,
+        'Alamat': data.alamat,
+        'TipeDonatur': data.donaturTipe,
+        'DetailAlumni': data.DetailAlumni,
+        'NamaSantri': data.namaSantri,
+        'NISSantri': data.nisSantri,
+        'KelasSantri': data.rombelSantri,
+        'PesanDoa': data.doa
+    };
+    
+    Object.keys(fieldMapping).forEach(formFieldId => {
+        const el = document.getElementById(`edit-${formFieldId}`);
+        if(el) el.value = fieldMapping[formFieldId] || '';
+    });
+    
     showModal(editModal);
 }
 
@@ -567,32 +582,42 @@ async function handleEditSubmit(e) {
     txt.classList.add('hidden'); 
     load.classList.remove('hidden');
 
-    const rowNumber = document.getElementById('edit-row-number').value;
-    const payload = {};
+    const idTransaksi = document.getElementById('edit-row-number').value;  // UUID instead of row
+    const formData = {};
     const inputs = editForm.querySelectorAll('input, select, textarea');
     
     // Mengumpulkan data dari form modal edit
     inputs.forEach(input => {
         const key = input.id.replace('edit-', '');
-        if (key && key !== 'row-number') payload[key] = input.value;
+        if (key && key !== 'row-number') formData[key] = input.value;
     });
+    
+    // Transform form data to new field names
+    const payload = {
+        type: formData.JenisDonasi,
+        nominal: parseFloat(formData.Nominal) || 0,
+        metode: formData.MetodePembayaran,
+        nama: formData.NamaDonatur,
+        hp: formData.NoHP,
+        alamat: formData.Alamat,
+        email: formData.Email,
+        NoKTP: formData.NoKTP,
+        doa: formData.PesanDoa,
+        donaturTipe: formData.TipeDonatur,
+        DetailAlumni: formData.DetailAlumni,
+        namaSantri: formData.NamaSantri,
+        nisSantri: formData.NISSantri,
+        rombelSantri: formData.KelasSantri
+    };
 
     try {
-        // --- PERBAIKAN UTAMA: AMBIL TOKEN DARI FIREBASE ---
-        const user = auth.currentUser;
-        if (!user) throw new Error("Sesi login berakhir. Silakan login ulang.");
-        
-        // Mengambil Token ID (KTP Digital) untuk dikirim ke GAS
-        const token = await user.getIdToken();
-
-        // Kirim data ke Google Apps Script API
+        // Kirim data ke Google Apps Script API dengan UUID
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({ 
                 action: "update", 
-                row: rowNumber, 
-                payload: payload,
-                authToken: token // WAJIB disertakan agar tidak ditolak oleh GAS
+                id: idTransaksi,  // Gunakan 'id' untuk UUID
+                payload: payload
             })
         });
 
@@ -618,20 +643,13 @@ async function handleEditSubmit(e) {
     }
 }
 
-async function executeDelete(rowNumber) {
+async function executeDelete(idTransaksi) {
     try {
-        const user = auth.currentUser;
-        if (!user) throw new Error("Silakan login kembali.");
-
-        // Ambil token terbaru
-        const token = await user.getIdToken(true); 
-
         const response = await fetch(GAS_API_URL, {
             method: 'POST',
             body: JSON.stringify({ 
                 action: "delete", 
-                row: rowNumber,
-                authToken: token 
+                id: idTransaksi  // Gunakan 'id' untuk UUID
             })
         });
 
@@ -647,7 +665,7 @@ async function executeDelete(rowNumber) {
 
 function exportToCSV() {
     if (filteredData.length === 0) return showAppAlert("Tidak ada data untuk diekspor", true);
-    const keys = ['Timestamp', 'JenisDonasi', 'Nominal', 'MetodePembayaran', 'NamaDonatur', 'TipeDonatur', 'NamaSantri', 'KelasSantri', 'NoHP', 'PesanDoa', 'Status'];
+    const keys = ['Timestamp', 'type', 'nominal', 'metode', 'nama', 'donaturTipe', 'namaSantri', 'rombelSantri', 'hp', 'doa', 'Status'];
     const csvRows = [keys.join(',')];
     filteredData.forEach(row => {
         const values = keys.map(key => {
@@ -681,15 +699,15 @@ function terbilang(nilai) {
 }
 
 // Fungsi Utama Cetak Kuitansi (Hanya Download Lokal)
-async function handlePrintReceipt(rowNumber) {
-    const data = allDonationData.find(r => r.row === rowNumber);
+async function handlePrintReceipt(idTransaksi) {
+    const data = allDonationData.find(r => r.idTransaksi === idTransaksi);  // Gunakan UUID
     if (!data) return;
 
     showAppAlert("Sedang membuat PDF...", false);
     
     // 1. ISI DATA KE TEMPLATE (Mapping Data)
     const dateObj = new Date(data.Timestamp);
-    const nominal = parseFloat(data.Nominal) || 0;
+    const nominal = parseFloat(data.nominal) || 0;  // Gunakan 'nominal' bukan 'Nominal'
     
     // Format Tanggal (Pecah per digit untuk kotak-kotak)
     const d = String(dateObj.getDate()).padStart(2, '0');
@@ -699,15 +717,15 @@ async function handlePrintReceipt(rowNumber) {
     const terbilangEl = document.getElementById('rcpt-terbilang-1');
     const terbilang2El = document.getElementById('rcpt-terbilang-2');
 
-    document.getElementById('rcpt-no').innerText = `KL-${data.row}`; // Contoh No Kuitansi
+    document.getElementById('rcpt-no').innerText = `KL-${idTransaksi.substring(0, 8)}`; // Gunakan 8 karakter pertama UUID
     document.getElementById('rcpt-d1').innerText = d[0]; document.getElementById('rcpt-d2').innerText = d[1];
     document.getElementById('rcpt-m1').innerText = m[0]; document.getElementById('rcpt-m2').innerText = m[1];
     document.getElementById('rcpt-y1').innerText = y[2]; document.getElementById('rcpt-y2').innerText = y[3];
 
-    document.getElementById('rcpt-nama').innerText = data.NamaDonatur || 'Hamba Allah';
-    document.getElementById('rcpt-alamat').innerText = data.Alamat || '-';
-    document.getElementById('rcpt-hp').innerText = data.NoHP || '-';
-    document.getElementById('rcpt-penyetor').innerText = data.NamaDonatur || '';
+    document.getElementById('rcpt-nama').innerText = data.nama || 'Hamba Allah';  // Gunakan 'nama'
+    document.getElementById('rcpt-alamat').innerText = data.alamat || '-';
+    document.getElementById('rcpt-hp').innerText = data.hp || '-';  // Gunakan 'hp'
+    document.getElementById('rcpt-penyetor').innerText = data.nama || '';
 
     // Clear All Nominal Fields
     const nominalFields = ['zakat', 'infaq', 'lain'];
@@ -718,18 +736,18 @@ async function handlePrintReceipt(rowNumber) {
 
     // Logic Penempatan Nominal
     const fmtNominal = formatter.format(nominal);
-    const jenis = (data.JenisDonasi || '').toLowerCase();
+    const jenis = (data.type || '').toLowerCase();  // Gunakan 'type' bukan 'JenisDonasi'
     
     // Cek Nominal (Hanya Rp 1.000.249)
     // Nominal dicetak sekali saja di kolom yang relevan.
     if(jenis.includes('zakat')) {
-        document.getElementById('rcpt-jenis-zakat').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-jenis-zakat').innerText = data.type;
         document.getElementById('rcpt-nom-zakat').innerText = fmtNominal;
-    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) { // Menangkap 'Infaq/Shadaqah'ndidikan'
-        document.getElementById('rcpt-jenis-infaq').innerText = data.JenisDonasi;
+    } else if(jenis.includes('infaq') || jenis.includes('shodaqoh') || jenis.includes('pendidikan')) {
+        document.getElementById('rcpt-jenis-infaq').innerText = data.type;
         document.getElementById('rcpt-nom-infaq').innerText = fmtNominal;
     } else {
-        document.getElementById('rcpt-jenis-lain').innerText = data.JenisDonasi;
+        document.getElementById('rcpt-jenis-lain').innerText = data.type;
         document.getElementById('rcpt-nom-lain').innerText = fmtNominal;
     }
     
@@ -737,9 +755,9 @@ async function handlePrintReceipt(rowNumber) {
     document.getElementById('rcpt-total').innerText = fmtNominal;
     
     // Checkbox Logic
-    document.getElementById('rcpt-chk-kas').innerText = data.MetodePembayaran === 'Tunai' ? 'V' : '';
-    document.getElementById('rcpt-chk-bank').innerText = data.MetodePembayaran !== 'Tunai' ? 'V' : '';
-    document.getElementById('rcpt-nama-bank').innerText = data.MetodePembayaran !== 'Tunai' ? data.MetodePembayaran : '';
+    document.getElementById('rcpt-chk-kas').innerText = data.metode === 'Tunai' ? 'V' : '';  // Gunakan 'metode'
+    document.getElementById('rcpt-chk-bank').innerText = data.metode !== 'Tunai' ? 'V' : '';
+    document.getElementById('rcpt-nama-bank').innerText = data.metode !== 'Tunai' ? data.metode : '';
     document.getElementById('rcpt-chk-wesel').innerText = ''; // Clear Wesel
 
     // Set Terbilang
@@ -762,7 +780,7 @@ async function handlePrintReceipt(rowNumber) {
     const element = document.getElementById('receipt-content');
     const opt = {
         margin: 0,
-        filename: `Kuitansi_Lazismu_${data.row}_${data.NamaDonatur.replace(/\s/g, '_')}.pdf`,
+        filename: `Kuitansi_Lazismu_${idTransaksi.substring(0, 8)}_${data.nama.replace(/\s/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
         html2canvas: { scale: 2, useCORS: true }, // Scale 2 sudah cukup tajam & lebih ringan
@@ -772,20 +790,13 @@ async function handlePrintReceipt(rowNumber) {
     try {
         await html2pdf().set(opt).from(element).save();
         
-        // --- PERBAIKAN: Ambil Token sebelum lapor ke server ---
-        const user = auth.currentUser;
-        if (user) {
-            const token = await user.getIdToken(); // Ambil token
-            
-            // Panggil server dengan membawa Token
-            await fetch(GAS_API_URL, {
-                method: 'POST',
-                body: JSON.stringify({ 
-                    action: "sendReceipt",
-                    authToken: token // <--- Token wajib disertakan!
-                })
-            });
-        }
+        // Panggil server untuk notifikasi (optional)
+        await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                action: "sendReceipt"
+            })
+        });
         
         showAppAlert(`Kuitansi PDF berhasil dibuat dan diunduh! Silakan cek folder Download Anda.`, false);
 
@@ -811,10 +822,11 @@ paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filter
 // Delegate Click Actions
 tableWrapperEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button'); if (!btn) return;
-    const row = parseInt(btn.dataset.row);
-    if (btn.classList.contains('verify-btn')) verifyDonation(row);
-    if (btn.classList.contains('edit-btn')) openEditModal(row);
-    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
-    // Handle Print Button
-    if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
+    const idTransaksi = btn.dataset.id;  // Gunakan data-id untuk UUID
+    if (!idTransaksi) return;
+    
+    if (btn.classList.contains('verify-btn')) verifyDonation(idTransaksi);
+    if (btn.classList.contains('edit-btn')) openEditModal(idTransaksi);
+    if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(idTransaksi));
+    if (btn.classList.contains('print-btn')) handlePrintReceipt(idTransaksi);
 });
