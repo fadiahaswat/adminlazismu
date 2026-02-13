@@ -12,8 +12,11 @@
  * 5. Check Execution log untuk hasil
  */
 
-const SPREADSHEET_ID = "1EhFeSGfar1mqzEQo5CgncmDr8nflFqcSyAaXAFmWFqE";
-const SHEET_NAME = "DataDonasi";
+// UPDATE THIS: Ganti dengan Spreadsheet ID Anda
+// Cara mendapatkan ID: Buka spreadsheet, copy dari URL
+// Contoh URL: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID_ANDA/edit
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE"; // ← GANTI INI!
+const SHEET_NAME = "DataDonasi"; // Sesuaikan nama sheet jika berbeda
 
 function diagnoseSpreadsheetStructure() {
   Logger.log("=== DIAGNOSTIC: Spreadsheet Structure ===\n");
