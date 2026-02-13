@@ -4,12 +4,12 @@
  * =====================================================================
  * Script ini mengelola data donasi dan kuitansi untuk website Lazismu Mu'allimin
  * Fitur:
- * - CRUD operations untuk data donasi berbasis UUID (Anti Bentrok)
+ * - CRUD operations untuk data donasi berbasis row number (16 kolom)
  * - Google reCAPTCHA v3 verification (Dengan fitur Bypass untuk Testing)
  * - Penyimpanan data kuitansi
  * - Verifikasi status donasi
  * 
- * @version 2.1 (Revised)
+ * @version 2.2 (Row-based, 16 columns)
  */
 
 // =====================================================================
@@ -61,18 +61,18 @@ function doPost(e) {
         break;
         
       case "verify":
-        if (!requestData.id) throw new Error("ID Transaksi is missing for verify action.");
-        result = verifyData(requestData.id);
+        if (!requestData.row) throw new Error("Row number is missing for verify action.");
+        result = verifyData(requestData.row);
         break;
         
       case "update":
-        if (!requestData.id || !requestData.payload) throw new Error("ID Transaksi and payload are required for update action.");
-        result = updateData(requestData.id, requestData.payload);
+        if (!requestData.row || !requestData.payload) throw new Error("Row number and payload are required for update action.");
+        result = updateData(requestData.row, requestData.payload);
         break;
         
       case "delete":
-        if (!requestData.id) throw new Error("ID Transaksi is missing for delete action.");
-        result = deleteData(requestData.id);
+        if (!requestData.row) throw new Error("Row number is missing for delete action.");
+        result = deleteData(requestData.row);
         break;
         
       case "sendReceipt":
@@ -141,45 +141,33 @@ function getSheet() {
   return sheet;
 }
 
-// HELPER: Cari nomor baris berdasarkan ID Transaksi (Anti-Bentrok)
-function findRowById(sheet, idTransaksi) {
-  const data = sheet.getRange("A:A").getValues(); // Baca Kolom A (ID Transaksi)
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === idTransaksi) {
-      return i + 1; // Return nomor baris sebenarnya
-    }
-  }
-  throw new Error(`Data dengan ID Transaksi ${idTransaksi} tidak ditemukan.`);
-}
-
 function createData(payload) {
   const sheet = getSheet();
   const timestamp = new Date();
-  const idTransaksi = Utilities.getUuid(); // Generate ID Unik
   
-  // Susun data sesuai struktur kolom A-Q (A adalah ID Transaksi)
+  // Susun data sesuai struktur kolom A-P (16 Kolom tanpa UUID)
   const rowData = [
-    idTransaksi,                // A: ID Transaksi (UUID)
-    timestamp,                  // B: Timestamp
-    payload.type || "",         // C: Jenis Donasi
-    payload.nominal || 0,       // D: Nominal
-    payload.metode || "",       // E: Metode Pembayaran
-    payload.nama || "",         // F: Nama Donatur
-    payload.donaturTipe || "",  // G: Tipe Donatur
-    payload.DetailAlumni || "", // H: Detail Alumni
-    payload.namaSantri || "",   // I: Nama Santri
-    payload.nisSantri || "",    // J: NIS Santri
-    payload.rombelSantri || "", // K: Rombel/Kelas Santri
-    payload.hp || "",           // L: No HP
-    payload.alamat || "",       // M: Alamat
-    payload.email || "",        // N: Email
-    payload.NoKTP || "",        // O: No KTP
-    payload.doa || "",          // P: Pesan Doa
-    "Belum Verifikasi"          // Q: Status
+    timestamp,                  // A: Timestamp
+    payload.type || "",         // B: Jenis Donasi
+    payload.nominal || 0,       // C: Nominal
+    payload.metode || "",       // D: Metode Pembayaran
+    payload.nama || "",         // E: Nama Donatur
+    payload.donaturTipe || "",  // F: Tipe Donatur
+    payload.DetailAlumni || "", // G: Detail Alumni
+    payload.namaSantri || "",   // H: Nama Santri
+    payload.nisSantri || "",    // I: NIS Santri
+    payload.rombelSantri || "", // J: Rombel/Kelas Santri
+    payload.hp || "",           // K: No HP
+    payload.alamat || "",       // L: Alamat
+    payload.email || "",        // M: Email
+    payload.NoKTP || "",        // N: No KTP
+    payload.doa || "",          // O: Pesan Doa
+    "Belum Verifikasi"          // P: Status
   ];
   
+  const row = sheet.getLastRow() + 1;
   sheet.appendRow(rowData);
-  return { message: "Data berhasil disimpan.", idTransaksi: idTransaksi };
+  return { message: "Data berhasil disimpan.", row: row };
 }
 
 function readData() {
@@ -188,45 +176,43 @@ function readData() {
   
   if (lastRow <= 1) return [];
   
-  // Baca data dari Kolom A-Q (17 Kolom)
-  const range = sheet.getRange(2, 1, lastRow - 1, 17);
+  // Baca data dari Kolom A-P (16 Kolom)
+  const range = sheet.getRange(2, 1, lastRow - 1, 16);
   const values = range.getValues();
   
-  return values.map(row => ({
-    idTransaksi: row[0],       // Ambil ID dari Kolom A
-    Timestamp: row[1],
-    type: row[2],              // Diseragamkan dengan frontend (dulu: JenisDonasi)
-    nominal: row[3],           // Diseragamkan
-    metode: row[4],            // Diseragamkan
-    nama: row[5],              // Diseragamkan
-    donaturTipe: row[6],
-    DetailAlumni: row[7],
-    namaSantri: row[8],
-    nisSantri: row[9],
-    rombelSantri: row[10],
-    hp: row[11],               // Diseragamkan
-    alamat: row[12],
-    email: row[13],
-    NoKTP: row[14],
-    doa: row[15],              // Diseragamkan (dulu: PesanDoa)
-    Status: row[16]
+  return values.map((row, index) => ({
+    row: index + 2,            // Nomor baris di sheet (mulai dari 2)
+    Timestamp: row[0],
+    type: row[1],              // Diseragamkan dengan frontend (dulu: JenisDonasi)
+    nominal: row[2],           // Diseragamkan
+    metode: row[3],            // Diseragamkan
+    nama: row[4],              // Diseragamkan
+    donaturTipe: row[5],
+    DetailAlumni: row[6],
+    namaSantri: row[7],
+    nisSantri: row[8],
+    rombelSantri: row[9],
+    hp: row[10],               // Diseragamkan
+    alamat: row[11],
+    email: row[12],
+    NoKTP: row[13],
+    doa: row[14],              // Diseragamkan (dulu: PesanDoa)
+    Status: row[15]
   }));
 }
 
-function verifyData(idTransaksi) {
+function verifyData(rowNumber) {
   const sheet = getSheet();
-  const rowNumber = findRowById(sheet, idTransaksi);
   
-  // Update kolom Q (17) dengan status "Terverifikasi"
-  sheet.getRange(rowNumber, 17).setValue("Terverifikasi");
+  // Update kolom P (16) dengan status "Terverifikasi"
+  sheet.getRange(rowNumber, 16).setValue("Terverifikasi");
   return { message: "Data berhasil diverifikasi." };
 }
 
-function updateData(idTransaksi, p) {
+function updateData(rowNumber, p) {
   const sheet = getSheet();
-  const rowNumber = findRowById(sheet, idTransaksi);
   
-  // Update data dari Kolom C - P (Diseragamkan dengan payload createData)
+  // Update data dari Kolom B - O (Diseragamkan dengan payload createData)
   const values = [[
     p.type || "",
     p.nominal || 0,
@@ -244,14 +230,13 @@ function updateData(idTransaksi, p) {
     p.doa || ""
   ]];
   
-  // Update 14 kolom mulai dari Kolom ke-3 (C)
-  sheet.getRange(rowNumber, 3, 1, 14).setValues(values);
+  // Update 14 kolom mulai dari Kolom ke-2 (B)
+  sheet.getRange(rowNumber, 2, 1, 14).setValues(values);
   return { message: "Data berhasil diperbarui." };
 }
 
-function deleteData(idTransaksi) {
+function deleteData(rowNumber) {
   const sheet = getSheet();
-  const rowNumber = findRowById(sheet, idTransaksi);
   sheet.deleteRow(rowNumber);
   return { message: "Data berhasil dihapus." };
 }
