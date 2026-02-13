@@ -6,7 +6,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-check.js";
 
 // --- IMPORT UTILITIES ---
-import { escapeHtml, formatRupiah, formatDate } from './src/utils/format.js';
+import { escapeHtml } from './src/utils/format.js';
 
 // --- IMPORT CONSTANTS ---
 import { 
@@ -734,10 +734,10 @@ async function handlePrintReceipt(rowNumber) {
 
     // 2. GENERATE PDF & DOWNLOAD LOKAL
     const element = document.getElementById('receipt-content');
-    const sanitizedName = (data.NamaDonatur || 'Donatur').replace(/\s/g, '_');
+    const filenameSafeName = (data.NamaDonatur || 'Donatur').replace(/\s/g, '_');
     const opt = {
         margin: 0,
-        filename: `Kuitansi_Lazismu_${data.row}_${sanitizedName}.pdf`,
+        filename: `Kuitansi_Lazismu_${data.row}_${filenameSafeName}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         // >>> OPTIMASI PENTING UNTUK MENGATASI MISALIGNMENT FIX (SCALE: 3)
         html2canvas: { scale: 2, useCORS: true }, // Scale 2 sudah cukup tajam & lebih ringan
