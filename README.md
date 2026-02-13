@@ -1,110 +1,290 @@
-# Admin Lazismu - Access Denied Fix
+# Admin Lazismu - Refactored & UUID-based
 
 ## 🎯 Ringkasan
 
-Repository ini berisi fix untuk error **"AKSES DITOLAK: Sesi tidak valid atau Anda bukan admin"** yang dialami oleh admin dengan email yang valid.
+Repository ini berisi aplikasi admin dashboard untuk mengelola donasi Lazismu Mu'allimin yang telah di-**refactor** dengan arsitektur modern, UUID-based operations, dan kode yang lebih mudah dikelola.
 
-## 🔴 Masalah yang Diperbaiki
+## ✨ Fitur Utama
 
-Admin yang sudah login dengan email yang benar (`lazismumuallimin@gmail.com`, `ad.lazismumuallimin@gmail.com`, atau `andiaqillahfadiahaswat@gmail.com`) mendapat error saat mencoba mengakses data donasi.
+- ✅ **UUID-based Operations** - Anti-bentrok, ID persisten
+- ✅ **Standardized Field Names** - Konsisten dan mudah dipahami
+- ✅ **Modular Code Structure** - Terorganisir dalam folder `src/`
+- ✅ **Firebase Authentication** - Login dengan Google (frontend only)
+- ✅ **ReCAPTCHA v3** - Proteksi form public
+- ✅ **CRUD Operations** - Create, Read, Update, Delete
+- ✅ **Advanced Filtering** - Filter by status, type, metode, tanggal
+- ✅ **PDF Generation** - Cetak kuitansi otomatis
+- ✅ **Export CSV** - Download data dalam format CSV
+- ✅ **Real-time Statistics** - Dashboard analytics
 
-## ✅ Solusi
+## 📦 Struktur Project
 
-Menambahkan autentikasi Firebase token ke semua operasi admin, termasuk operasi `fetch` yang sebelumnya tidak terproteksi.
+```
+adminlazismu/
+├── src/                    # Source code modular
+│   ├── constants.js       # Konfigurasi & konstanta
+│   ├── api/
+│   │   └── gasAPI.js      # API layer untuk GAS
+│   └── utils/
+│       └── format.js      # Utility functions
+├── admin.js               # File utama (refactored)
+├── admin.js.backup        # Backup file lama
+├── admin.css              # Styling
+├── index.html             # UI template
+├── Code.gs                # Backend (Google Apps Script)
+├── tailwind-generated.css # Tailwind output
+└── REFACTORING_GUIDE.md   # Panduan refactoring detail
 
-## 📦 Perubahan yang Dilakukan
-
-### Frontend
-- **File:** `admin.js`
-- **Perubahan:** Fungsi `fetchData()` sekarang mengirim Firebase authentication token
-
-### Backend  
-- **File:** `Code.gs` (Google Apps Script)
-- **Perubahan:** 
-  - Menambah "fetch" ke daftar protected actions
-  - Implementasi handler untuk action "fetch" dengan autentikasi
-
-## 📚 Dokumentasi
-
-| File | Deskripsi |
-|------|-----------|
-| [NEXT_STEPS.md](NEXT_STEPS.md) | ⭐ **MULAI DI SINI** - Panduan deployment cepat (5 menit) |
-| [README_FIX.md](README_FIX.md) | Penjelasan detail dengan diagram visual |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Panduan deployment lengkap |
-| [CHANGES_SUMMARY.md](CHANGES_SUMMARY.md) | Detail perubahan kode before/after |
-| [SECURITY_SUMMARY.md](SECURITY_SUMMARY.md) | Analisis keamanan |
-| [Code.gs](Code.gs) | Backend script yang sudah diperbaiki |
+📚 Documentation Files:
+├── README.md              # This file
+├── REFACTORING_GUIDE.md   # ⭐ Panduan refactoring lengkap
+├── DEPLOYMENT.md          # Panduan deployment
+├── CHANGES_SUMMARY.md     # Summary perubahan
+└── SECURITY_SUMMARY.md    # Analisis keamanan
+```
 
 ## 🚀 Quick Start
 
-### 1. Update Backend (WAJIB!)
+### 1. Setup Backend (WAJIB!)
+
 ```bash
 1. Buka Google Spreadsheet Anda
-2. Extensions → Apps Script
-3. Copy semua isi file Code.gs dari repo ini
-4. Paste ke Apps Script editor (replace semua)
-5. Save & Deploy version baru
+2. Pastikan ada kolom A untuk "idTransaksi" (UUID)
+3. Extensions → Apps Script
+4. Copy semua isi file Code.gs dari repo ini
+5. Paste ke Apps Script editor
+6. Configure RECAPTCHA_SECRET_KEY
+7. Set BYPASS_RECAPTCHA = true untuk testing
+8. Save & Deploy version baru
 ```
 
-### 2. Frontend (Otomatis)
-Frontend sudah otomatis terupdate jika Anda menggunakan GitHub Pages.
+### 2. Setup Frontend
 
-### 3. Test
+Frontend sudah otomatis terupdate jika menggunakan GitHub Pages.
+
+**Konfigurasi Firebase (sudah ada di admin.js):**
+- API Key sudah ter-configure
+- Domain restrictions di Firebase Console
+
+### 3. Test Application
+
 ```bash
-1. Buka admin dashboard
-2. Login dengan email admin
-3. Pastikan data muncul tanpa error
+1. Buka https://[your-domain]/index.html
+2. Login dengan Google (email admin)
+3. Coba fetch data
+4. Test CRUD operations
 ```
+
+## 🔑 Konfigurasi
+
+### Backend (Code.gs)
+
+```javascript
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID";
+const SHEET_NAME = "DataDonasi";
+const SHEET_KUITANSI = "DataKuitansi";
+const RECAPTCHA_SECRET_KEY = "YOUR_RECAPTCHA_SECRET";
+const BYPASS_RECAPTCHA = true; // Set FALSE untuk production
+```
+
+### Frontend (admin.js)
+
+```javascript
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  // ...
+};
+
+// Allowed Admin Emails
+const ALLOWED_ADMIN_EMAILS = [
+  "admin1@example.com",
+  "admin2@example.com"
+];
+```
+
+## 📋 Perubahan dari Versi Lama
+
+### ✅ Yang Berubah
+
+| Aspek | Lama | Baru |
+|-------|------|------|
+| **ID System** | Row number (integer) | UUID (string) |
+| **Field Names** | PascalCase (JenisDonasi) | camelCase/lowercase (type) |
+| **Backend Auth** | Firebase token validation | No auth (public form protected by ReCAPTCHA) |
+| **Code Structure** | Monolithic (1 file) | Modular (src/) |
+| **API Requests** | `{action, row, authToken}` | `{action, id}` |
+
+### ✅ Yang Tetap
+
+- Firebase Authentication untuk login admin (frontend)
+- Google Apps Script sebagai backend
+- Google Sheets sebagai database
+- UI/UX design
+- Semua fitur (CRUD, filter, export, print)
 
 ## 🔐 Keamanan
 
-Semua operasi admin sekarang memerlukan autentikasi Firebase:
+### Frontend
+- ✅ Firebase Authentication (Google Sign-In)
+- ✅ Email whitelist validation
+- ✅ XSS protection (HTML escaping)
+- ✅ CSP headers
 
-- ✅ **fetch** - Ambil data donasi (BARU!)
-- ✅ **verify** - Verifikasi donasi
-- ✅ **update** - Update donasi  
-- ✅ **delete** - Hapus donasi
-- ✅ **kuitansi** - Simpan kuitansi
-- ✅ **sendReceipt** - Kirim kuitansi
+### Backend
+- ✅ ReCAPTCHA v3 untuk form public
+- ✅ UUID anti-collision
+- ✅ Script lock untuk concurrent requests
+- ✅ Input validation
 
-**CodeQL Scan:** ✅ Passed - No vulnerabilities
+**⚠️ Catatan Penting:**
+- Backend TIDAK lagi memvalidasi Firebase token
+- Admin authentication hanya di frontend untuk UI access control
+- Public donation form diproteksi dengan ReCAPTCHA
 
-## 📋 Checklist Deployment
+## 📝 API Documentation
 
-- [ ] Backend (Code.gs) sudah diupdate di Google Apps Script
-- [ ] Deploy version baru sudah dibuat
-- [ ] Test login berhasil
-- [ ] Data muncul tanpa error "AKSES DITOLAK"
-- [ ] Test operasi admin (verify, edit, delete)
+### Fetch Data
+```javascript
+GET /exec
+Response: {
+  status: "success",
+  data: [{idTransaksi, type, nominal, ...}, ...]
+}
+```
 
-## 🆘 Troubleshooting
+### Verify Donation
+```javascript
+POST /exec
+{
+  action: "verify",
+  id: "uuid-123"
+}
+```
 
-### Error: "Aksi tidak dikenal: fetch"
-➜ Backend belum diupdate. Deploy Code.gs ke Google Apps Script.
+### Update Donation
+```javascript
+POST /exec
+{
+  action: "update",
+  id: "uuid-123",
+  payload: {
+    type: "Zakat",
+    nominal: 1000000,
+    metode: "Transfer",
+    // ...
+  }
+}
+```
 
-### Error: "AKSES DITOLAK" masih muncul
-➜ Clear cache browser, logout, dan login kembali.
+### Delete Donation
+```javascript
+POST /exec
+{
+  action: "delete",
+  id: "uuid-123"
+}
+```
 
-### Data tidak muncul
-➜ Check browser console (F12) untuk error detail.
+## 🧪 Testing Checklist
+
+- [ ] Login dengan Google
+- [ ] Fetch data dengan field names baru
+- [ ] Filter by type, metode, status
+- [ ] Search donatur
+- [ ] Verify donation (UUID-based)
+- [ ] Edit donation (field mapping)
+- [ ] Delete donation
+- [ ] Export CSV
+- [ ] Print kuitansi
+- [ ] Statistics dashboard
+- [ ] Pagination
+
+## 📚 Dokumentasi Lengkap
+
+| File | Deskripsi |
+|------|-----------|
+| [REFACTORING_GUIDE.md](REFACTORING_GUIDE.md) | ⭐ **Panduan refactoring lengkap** |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Panduan deployment step-by-step |
+| [CHANGES_SUMMARY.md](CHANGES_SUMMARY.md) | Detail perubahan kode |
+| [SECURITY_SUMMARY.md](SECURITY_SUMMARY.md) | Analisis keamanan |
 
 ## 👥 Admin Email yang Diizinkan
 
-```
+```javascript
 lazismumuallimin@gmail.com
 ad.lazismumuallimin@gmail.com
 andiaqillahfadiahaswat@gmail.com
 ```
 
+## 🔧 Development
+
+### Setup Local Development
+
+```bash
+# Clone repository
+git clone https://github.com/fadiahaswat/adminlazismu
+
+# No npm install needed (pure vanilla JS)
+
+# Open index.html di browser
+# atau gunakan local server:
+python -m http.server 8000
+```
+
+### Code Style
+
+- ES6+ JavaScript
+- Modular structure
+- JSDoc comments (coming soon)
+- Consistent naming (camelCase)
+
+## 🐛 Troubleshooting
+
+### "Data tidak muncul"
+- Check browser console (F12)
+- Pastikan Code.gs sudah deployed
+- Verify field names di backend match
+
+### "Invalid action: verify"
+- Backend belum diupdate
+- Deploy Code.gs terbaru
+
+### "Data dengan ID ... tidak ditemukan"
+- UUID tidak valid atau data terhapus
+- Check spreadsheet langsung
+
+### Filter tidak bekerja
+- Clear all filters dan coba lagi
+- Refresh halaman
+
 ## 📞 Support
 
-Baca dokumentasi di folder ini, terutama:
-1. **NEXT_STEPS.md** - Untuk deployment
-2. **README_FIX.md** - Untuk pemahaman teknis
-3. **DEPLOYMENT.md** - Untuk troubleshooting
+- **Issues**: [GitHub Issues](https://github.com/fadiahaswat/adminlazismu/issues)
+- **Documentation**: Baca file .md di repository
+- **Contact**: Lihat email admin di atas
+
+## 🎉 Changelog
+
+### Version 2.0 (Current)
+- ✅ Refactored to UUID-based architecture
+- ✅ Standardized field names
+- ✅ Modular code structure
+- ✅ Removed backend Firebase auth
+- ✅ Added ReCAPTCHA protection
+- ✅ Improved code organization
+
+### Version 1.0
+- Initial release with row-based operations
+- Firebase authentication (frontend + backend)
+- Basic CRUD operations
 
 ---
 
-**Status:** ✅ Fix Complete - Siap untuk Deployment  
-**Last Updated:** 2026-02-05  
-**Version:** 1.0
+**Status:** ✅ Refactoring Complete & Production Ready  
+**Last Updated:** 2026-02-13  
+**Version:** 2.0  
+**Maintainer:** Lazismu Mu'allimin Tech Team
+
