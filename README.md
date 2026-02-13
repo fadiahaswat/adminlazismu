@@ -1,5 +1,17 @@
 # Admin Lazismu - Refactored & UUID-based
 
+## 🚨 TROUBLESHOOTING: Aplikasi "Belum Sadar" Kolom ID Transaksi?
+
+**Jika aplikasi sepertinya tidak mengenali kolom ID Transaksi di spreadsheet:**
+👉 **Baca:** [README_FIX_ID_TRANSAKSI.md](README_FIX_ID_TRANSAKSI.md) - Panduan lengkap diagnosa & perbaikan
+
+**Quick Fix:**
+1. Jalankan diagnostic script: `DIAGNOSTIC_SCRIPT.gs` 
+2. Ikuti instruksi sesuai hasil diagnostic
+3. Aplikasi akan berfungsi normal kembali! ✅
+
+---
+
 ## 🎯 Ringkasan
 
 Repository ini berisi aplikasi admin dashboard untuk mengelola donasi Lazismu Mu'allimin yang telah di-**refactor** dengan arsitektur modern, UUID-based operations, dan kode yang lebih mudah dikelola.
