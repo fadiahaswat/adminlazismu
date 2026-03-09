@@ -450,6 +450,7 @@ function renderTable() {
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="whatsapp-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-green-100" data-row="${escapeHtml(row.row)}" title="Salin Pesan WhatsApp"><i class="fab fa-whatsapp text-xs"></i></button>
                     <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
 
                     ${verifyBtnHTML}
@@ -773,6 +774,75 @@ async function handlePrintReceipt(rowNumber) {
 }
 
 
+// === FUNGSI SALIN PESAN WHATSAPP ===
+
+function generateWhatsAppMessage(data) {
+    const dateObj = new Date(data.Timestamp);
+    const tgl = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric' });
+    const nama = data.NamaDonatur || 'Hamba Allah';
+    const noHP = data.NoHP || '-';
+    const jenis = data.JenisDonasi || '-';
+    const nominal = parseFloat(data.Nominal) || 0;
+    const fmtNominal = formatter.format(nominal).replace('Rp\u00a0', 'Rp ').replace(/\u00a0/g, ' ');
+    const metode = data.MetodePembayaran || '-';
+    const status = data.Status || 'Belum Verifikasi';
+
+    const isSantri = data.TipeDonatur === 'santri' && data.NamaSantri;
+    const santriName = isSantri ? data.NamaSantri : null;
+
+    // Baris santri dalam blok kuitansi (hanya muncul jika via santri)
+    const santriReceiptLine = isSantri
+        ? `\n🎓 *Atas Nama/Melalui* : *${santriName}*` : '';
+
+    // Paragraf doa: versi santri vs umum
+    const doaParagraph = isSantri
+        ? `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh keluarga ${nama} melalui ananda ${santriName}.\nJadikanlah zakat ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`
+        : `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh ${nama}.\nJadikanlah ${jenis} ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`;
+
+    const pesan =
+`_Assalamualaikum Warahmatullahi Wabarakatuh._
+
+Kepada Yth. *${nama},*
+
+Alhamdulillah, terima kasih atas kepercayaan Bapak/Ibu dalam menunaikan *${jenis}*. Kami mengonfirmasi bahwa dana tersebut telah kami terima dengan rincian sebagai berikut:
+
+*🧾 E-KUITANSI LAZISMU MU'ALLIMIN*
+🗓 Tanggal : ${tgl}
+👤 Nama Donatur : ${nama}${santriReceiptLine}
+📱 No. HP : ${noHP}
+💰 *Nominal* : *${fmtNominal}*
+📋 Program : ${jenis}
+💳 Metode : ${metode}
+✅ Status : ${status}
+
+بسم الله الرحمن الرحيم اللهم صل على محمد
+
+${doaParagraph}
+
+آجَرَكَ اللهُ فِيْمَا اَعْطَيْتَ، وَبَارَكَ فِيْمَا اَبْقَيْتَ وَجَعَلَهُ لَكَ طَهُوْرًا
+
+_"Semoga Allah memberikan pahala atas apa yang engkau berikan, memberikan keberkahan atas harta yang kau simpan, dan menjadikannya pembersih dosa bagimu." Aamiin Ya Rabbal Alamin._ 🙏
+
+Insya Allah, *Lazismu Mu'allimin* akan mengelola dan menyampaikan amanah ini kepada para mustahiq yang membutuhkan dengan sebaik-baiknya.
+
+_Jazakumullah Khairan Katsiran._
+_Wassalamu'alaikum Warahmatullahi Wabarakatuh._`;
+
+    return pesan;
+}
+
+async function copyWhatsAppMessage(rowNumber) {
+    const data = allDonationData.find(r => r.row === rowNumber);
+    if (!data) return;
+    const pesan = generateWhatsAppMessage(data);
+    try {
+        await navigator.clipboard.writeText(pesan);
+        showAppAlert('Pesan WhatsApp berhasil disalin ke clipboard! Silakan tempel ke chat WhatsApp.', false);
+    } catch (err) {
+        showAppAlert('Gagal menyalin: ' + err.message, true);
+    }
+}
+
 // Event Listeners
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
@@ -792,4 +862,6 @@ tableWrapperEl.addEventListener('click', (e) => {
     if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
     // Handle Print Button
     if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
+    // Handle WhatsApp Copy Button
+    if (btn.classList.contains('whatsapp-btn')) copyWhatsAppMessage(row);
 });
