@@ -450,6 +450,7 @@ function renderTable() {
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
                 <div class="flex justify-end items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="whatsapp-btn w-8 h-8 rounded-lg bg-green-50 text-green-600 hover:bg-green-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-green-100" data-row="${escapeHtml(row.row)}" title="Salin Pesan WhatsApp"><i class="fab fa-whatsapp text-xs"></i></button>
                     <button class="print-btn w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-500 hover:text-white transition flex items-center justify-center mr-2 shadow-sm border border-purple-100" data-row="${escapeHtml(row.row)}" title="Cetak Kuitansi"><i class="fas fa-print text-xs"></i></button>
 
                     ${verifyBtnHTML}
@@ -773,6 +774,67 @@ async function handlePrintReceipt(rowNumber) {
 }
 
 
+// === FUNGSI SALIN PESAN WHATSAPP ===
+
+function generateWhatsAppMessage(data) {
+    const dateObj = new Date(data.Timestamp);
+    const tgl = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'numeric', year: 'numeric' });
+    const nama = data.NamaDonatur || 'Hamba Allah';
+    const noHP = data.NoHP || '-';
+    const jenis = data.JenisDonasi || '-';
+    const nominal = parseFloat(data.Nominal) || 0;
+    const fmtNominal = formatter.format(nominal).replace('Rp\u00a0', 'Rp ').replace(/\u00a0/g, ' ');
+    const metode = data.MetodePembayaran || '-';
+    const status = data.Status || 'Belum Verifikasi';
+
+    let santriLine = '';
+    if (data.TipeDonatur === 'santri' && data.NamaSantri) {
+        santriLine = `\n🧒 Atas Nama Santri: *${data.NamaSantri}*`;
+    }
+
+    const pesan =
+`Assalamualaikum Warahmatullahi Wabarakatuh.
+
+Kepada Yth. ${nama},
+
+Kami sampaikan dengan hormat bahwa kami telah menerima dan memproses bukti setoran ${jenis} dengan rincian:
+
+🧾 E-KUITANSI LAZISMU
+--------------------------------
+🗓 Tgl: ${tgl}
+👤 Nama: *${nama}*
+📱 No. HP: ${noHP}
+💰 Nominal: *${fmtNominal},-*
+📋 Jenis Donasi: ${jenis}${santriLine}
+💳 Metode: ${metode}
+✅ Status: ${status}
+--------------------------------
+
+Kami mengucapkan apresiasi setinggi-tingginya atas kepedulian dan kepercayaan Bapak/Ibu/Saudara/(i) dalam memilih LAZISMU Mu'allimin sebagai penyalur Zakat, Infaq/Shadaqah, dan dana sosial keagamaan lainnya. Setiap donasi yang Bapak/Ibu/Saudara/i titipkan adalah kekuatan bagi program kemanusiaan kami.
+
+🤲 Doa Kami untuk Keberkahan Bapak/Ibu/Saudara/i dan Keluarga:
+
+آجَرَكَ اللهُ فِيْمَا اَعْطَيْتَ، وَبَارَكَ فِيْمَا اَبْقَيْتَ وَجَعَلَهُ لَكَ طَهُوْرًا
+
+"Semoga Allah memberikan pahala kepadamu pada barang yang engkau berikan (zakatkan) dan semoga Allah memberkahimu dalam harta-harta yang masih engkau sisakan dan semoga pula menjadikannya sebagai pembersih (dosa) bagimu"
+
+Wassalamu'alaikum Warahmatullahi Wabarakatuh.`;
+
+    return pesan;
+}
+
+async function copyWhatsAppMessage(rowNumber) {
+    const data = allDonationData.find(r => r.row === rowNumber);
+    if (!data) return;
+    const pesan = generateWhatsAppMessage(data);
+    try {
+        await navigator.clipboard.writeText(pesan);
+        showAppAlert('Pesan WhatsApp berhasil disalin ke clipboard! Silakan tempel ke chat WhatsApp.', false);
+    } catch (err) {
+        showAppAlert('Gagal menyalin: ' + err.message, true);
+    }
+}
+
 // Event Listeners
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
@@ -792,4 +854,6 @@ tableWrapperEl.addEventListener('click', (e) => {
     if (btn.classList.contains('delete-btn')) showAppConfirm("Hapus data ini secara permanen?", () => executeDelete(row));
     // Handle Print Button
     if (btn.classList.contains('print-btn')) handlePrintReceipt(row);
+    // Handle WhatsApp Copy Button
+    if (btn.classList.contains('whatsapp-btn')) copyWhatsAppMessage(row);
 });
