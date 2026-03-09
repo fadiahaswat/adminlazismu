@@ -787,38 +787,46 @@ function generateWhatsAppMessage(data) {
     const metode = data.MetodePembayaran || '-';
     const status = data.Status || 'Belum Verifikasi';
 
-    let santriLine = '';
-    if (data.TipeDonatur === 'santri' && data.NamaSantri) {
-        santriLine = `\n🧒 Atas Nama Santri: *${data.NamaSantri}*`;
-    }
+    const isSantri = data.TipeDonatur === 'santri' && data.NamaSantri;
+    const santriName = isSantri ? data.NamaSantri : null;
+
+    // Baris santri dalam blok kuitansi (hanya muncul jika via santri)
+    const santriReceiptLine = isSantri
+        ? `\n🎓 *Atas Nama/Melalui* : *${santriName}*` : '';
+
+    // Paragraf doa: versi santri vs umum
+    const doaParagraph = isSantri
+        ? `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh keluarga ${nama} melalui ananda ${santriName}.\nJadikanlah zakat ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`
+        : `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh ${nama}.\nJadikanlah ${jenis} ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`;
 
     const pesan =
-`Assalamualaikum Warahmatullahi Wabarakatuh.
+`_Assalamualaikum Warahmatullahi Wabarakatuh._
 
-Kepada Yth. ${nama},
+Kepada Yth. *${nama},*
 
-Kami sampaikan dengan hormat bahwa kami telah menerima dan memproses bukti setoran ${jenis} dengan rincian:
+Alhamdulillah, terima kasih atas kepercayaan Bapak/Ibu dalam menunaikan *${jenis}*. Kami mengonfirmasi bahwa dana tersebut telah kami terima dengan rincian sebagai berikut:
 
-🧾 E-KUITANSI LAZISMU
---------------------------------
-🗓 Tgl: ${tgl}
-👤 Nama: *${nama}*
-📱 No. HP: ${noHP}
-💰 Nominal: *${fmtNominal},-*
-📋 Jenis Donasi: ${jenis}${santriLine}
-💳 Metode: ${metode}
-✅ Status: ${status}
---------------------------------
+*🧾 E-KUITANSI LAZISMU MU'ALLIMIN*
+🗓 Tanggal : ${tgl}
+👤 Nama Donatur : ${nama}${santriReceiptLine}
+📱 No. HP : ${noHP}
+💰 *Nominal* : *${fmtNominal}*
+📋 Program : ${jenis}
+💳 Metode : ${metode}
+✅ Status : ${status}
 
-Kami mengucapkan apresiasi setinggi-tingginya atas kepedulian dan kepercayaan Bapak/Ibu/Saudara/(i) dalam memilih LAZISMU Mu'allimin sebagai penyalur Zakat, Infaq/Shadaqah, dan dana sosial keagamaan lainnya. Setiap donasi yang Bapak/Ibu/Saudara/i titipkan adalah kekuatan bagi program kemanusiaan kami.
+بسم الله الرحمن الرحيم اللهم صل على محمد
 
-🤲 Doa Kami untuk Keberkahan Bapak/Ibu/Saudara/i dan Keluarga:
+${doaParagraph}
 
 آجَرَكَ اللهُ فِيْمَا اَعْطَيْتَ، وَبَارَكَ فِيْمَا اَبْقَيْتَ وَجَعَلَهُ لَكَ طَهُوْرًا
 
-"Semoga Allah memberikan pahala kepadamu pada barang yang engkau berikan (zakatkan) dan semoga Allah memberkahimu dalam harta-harta yang masih engkau sisakan dan semoga pula menjadikannya sebagai pembersih (dosa) bagimu"
+_"Semoga Allah memberikan pahala atas apa yang engkau berikan, memberikan keberkahan atas harta yang kau simpan, dan menjadikannya pembersih dosa bagimu." Aamiin Ya Rabbal Alamin._ 🙏
 
-Wassalamu'alaikum Warahmatullahi Wabarakatuh.`;
+Insya Allah, *Lazismu Mu'allimin* akan mengelola dan menyampaikan amanah ini kepada para mustahiq yang membutuhkan dengan sebaik-baiknya.
+
+_Jazakumullah Khairan Katsiran._
+_Wassalamu'alaikum Warahmatullahi Wabarakatuh._`;
 
     return pesan;
 }
