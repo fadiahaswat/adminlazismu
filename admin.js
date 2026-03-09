@@ -799,12 +799,18 @@ function generateWhatsAppMessage(data) {
         ? `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh keluarga ${nama} melalui ananda ${santriName}.\nJadikanlah zakat ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`
         : `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh ${nama}.\nJadikanlah ${jenis} ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`;
 
+    // Paragraf konfirmasi: berbeda untuk Tunai vs metode lainnya
+    const isTunai = metode === 'Tunai';
+    const konfirmasiParagraph = isTunai
+        ? `Alhamdulillah, terima kasih atas kepercayaan Bapak/Ibu dalam menunaikan *${jenis}*. Dana tunai Bapak/Ibu akan kami terima ketika santri telah kembali ke asrama dan menyerahkan kepada musyrif, yang selanjutnya akan dikumpulkan kepada Lazismu Mu'allimin. Berikut rincian donasi Bapak/Ibu:`
+        : `Alhamdulillah, terima kasih atas kepercayaan Bapak/Ibu dalam menunaikan *${jenis}*. Kami mengonfirmasi bahwa dana tersebut telah kami terima dengan rincian sebagai berikut:`;
+
     const pesan =
 `_Assalamualaikum Warahmatullahi Wabarakatuh._
 
 Kepada Yth. *${nama},*
 
-Alhamdulillah, terima kasih atas kepercayaan Bapak/Ibu dalam menunaikan *${jenis}*. Kami mengonfirmasi bahwa dana tersebut telah kami terima dengan rincian sebagai berikut:
+${konfirmasiParagraph}
 
 *🧾 E-KUITANSI LAZISMU MU'ALLIMIN*
 🗓 Tanggal : ${tgl}
