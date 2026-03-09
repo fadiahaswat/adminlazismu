@@ -792,7 +792,7 @@ function generateWhatsAppMessage(data) {
 
     // Baris santri dalam blok kuitansi (hanya muncul jika via santri)
     const santriReceiptLine = isSantri
-        ? `\n🎓 *Atas Nama/Melalui* : *${santriName}*` : '';
+        ? `\n🎓 *Melalui santri* : *${santriName}*` : '';
 
     // Paragraf doa: versi santri vs umum
     const doaParagraph = isSantri
