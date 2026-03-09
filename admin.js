@@ -796,7 +796,7 @@ function generateWhatsAppMessage(data) {
 
     // Paragraf doa: versi santri vs umum
     const doaParagraph = isSantri
-        ? `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh keluarga ${nama} melalui ananda ${santriName}.\nJadikanlah zakat ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`
+        ? `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh keluarga ${nama} melalui ananda ${santriName}.\nJadikanlah ${jenis} ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`
         : `Ya Allah, berikanlah pahala yang berlipat atas harta yang telah dikeluarkan oleh ${nama}.\nJadikanlah ${jenis} ini sebagai pembersih lahir dan batin, penjaga dari segala penyakit, serta pelindung dari marabahaya maupun kezaliman.\nJadikanlah mereka insan yang suci, dan jadikanlah Ramadhan ini sebagai bulan penuh ampunan atas segala khilaf.\nSemoga ibadah keluarga senantiasa dilancarkan dan diberkahi.`;
 
     // Paragraf konfirmasi: berbeda untuk Tunai vs metode lainnya
