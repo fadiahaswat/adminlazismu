@@ -888,9 +888,9 @@ async function copyWhatsAppMessage(rowNumber) {
 /** Normalize a raw santri object from the API into a consistent shape */
 function normalizeSantriItem(item) {
     return {
-        nama:  (item.nama  || item.NamaSantri  || item.Nama  || item.name  || '').trim(),
-        nis:   (item.nis   || item.NISSantri   || item.NIS   || item.id    || '').trim(),
-        kelas: (item.kelas || item.KelasSantri || item.Kelas || item.rombel || item.Rombel || '').trim(),
+        nama:  String(item.nama  || item.NamaSantri  || item.Nama  || item.name  || '').trim(),
+        nis:   String(item.nis   || item.NISSantri   || item.NIS   || item.id    || '').trim(),
+        kelas: String(item.kelas || item.KelasSantri || item.Kelas || item.rombel || item.Rombel || '').trim(),
     };
 }
 
@@ -1009,13 +1009,13 @@ function renderClassReport(data) {
     // Aggregate by class from donations
     const classMap = {};
     santriDonations.forEach(row => {
-        const kelas = row.KelasSantri.trim();
+        const kelas = String(row.KelasSantri).trim();
         if (!classMap[kelas]) {
             classMap[kelas] = { totalAmount: 0, verifiedAmount: 0, unverifiedAmount: 0, donatedKeys: new Set() };
         }
         const val = parseFloat(row.Nominal) || 0;
         classMap[kelas].totalAmount += val;
-        const key = (row.NISSantri || row.NamaSantri || '').trim().toLowerCase();
+        const key = String(row.NISSantri || row.NamaSantri || '').trim().toLowerCase();
         if (key) classMap[kelas].donatedKeys.add(key);
         if ((row.Status || 'Belum Verifikasi') === 'Terverifikasi') {
             classMap[kelas].verifiedAmount += val;
@@ -1099,8 +1099,8 @@ function renderSantriChecker() {
     const donatedKeys = new Set();
     allDonationData.forEach(row => {
         if (row.TipeDonatur === 'santri') {
-            if (row.NISSantri) donatedKeys.add(row.NISSantri.trim().toLowerCase());
-            if (row.NamaSantri) donatedKeys.add(row.NamaSantri.trim().toLowerCase());
+            if (row.NISSantri) donatedKeys.add(String(row.NISSantri).trim().toLowerCase());
+            if (row.NamaSantri) donatedKeys.add(String(row.NamaSantri).trim().toLowerCase());
         }
     });
 
