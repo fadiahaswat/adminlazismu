@@ -13,9 +13,7 @@ import {
     FIREBASE_CONFIG, 
     RECAPTCHA_SITE_KEY, 
     ALLOWED_ADMIN_EMAILS, 
-    GAS_API_URL,
-    GAS_SANTRI_API_URL,
-    CACHE,
+    GAS_API_URL, 
     BTN_LOGIN_GOOGLE_HTML 
 } from './src/constants.js';
 
@@ -141,19 +139,13 @@ onAuthStateChanged(auth, (user) => {
         overlay.classList.add('hidden'); // Buka gerbang (sembunyikan login)
 
         if(contentEl) contentEl.classList.remove('hidden');
-        const analyticsEl = document.getElementById('analytics-section');
-        if(analyticsEl) analyticsEl.classList.remove('hidden');
         
         // Panggil fungsi ambil data Anda yang lama
-        fetchData();
-        fetchSantriData();
-        fetchClassData();
+        fetchData(); 
     } else {
         // JIKA TIDAK LOGIN / BELUM LOGIN
         overlay.classList.remove('hidden'); // Tutup gerbang (munculkan login)
         if(contentEl) contentEl.classList.add('hidden');
-        const analyticsEl = document.getElementById('analytics-section');
-        if(analyticsEl) analyticsEl.classList.add('hidden');
     }
 });
 
@@ -176,10 +168,6 @@ const statHariIniEl = document.getElementById('admin-stat-hari-ini');
 const statTertinggiEl = document.getElementById('admin-stat-tertinggi');
 const statRataEl = document.getElementById('admin-stat-rata');
 const statTipeEl = document.getElementById('admin-stat-tipe');
-const statVerifiedTotalEl = document.getElementById('admin-stat-verified-total');
-const statVerifiedCountEl = document.getElementById('admin-stat-verified-count');
-const statUnverifiedTotalEl = document.getElementById('admin-stat-unverified-total');
-const statUnverifiedCountEl = document.getElementById('admin-stat-unverified-count');
 
 // Modal Elements
 const alertModal = document.getElementById('alert-modal');
@@ -208,8 +196,6 @@ let filteredData = [];
 let currentPage = 1;
 let rowsPerPage = 50;
 let confirmCallback = null;
-let allSantriData = [];
-let classMetaData = {};
 
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -341,10 +327,6 @@ function calculateStatistics(data) {
     let count = data.length;
     let maxVal = 0;
     let todayTotal = 0;
-    let verifiedTotal = 0;
-    let verifiedCount = 0;
-    let unverifiedTotal = 0;
-    let unverifiedCount = 0;
     const todayStr = new Date().toDateString();
     
     const typeCounts = {};
@@ -360,14 +342,6 @@ function calculateStatistics(data) {
 
         const type = row.JenisDonasi || 'Lainnya';
         typeCounts[type] = (typeCounts[type] || 0) + 1;
-
-        if ((row.Status || 'Belum Verifikasi') === 'Terverifikasi') {
-            verifiedTotal += val;
-            verifiedCount++;
-        } else {
-            unverifiedTotal += val;
-            unverifiedCount++;
-        }
     });
 
     let topType = '-';
@@ -387,10 +361,6 @@ function calculateStatistics(data) {
     statTertinggiEl.textContent = formatter.format(maxVal);
     statRataEl.textContent = formatter.format(avgVal);
     statTipeEl.textContent = topType;
-    statVerifiedTotalEl.textContent = formatter.format(verifiedTotal);
-    statVerifiedCountEl.textContent = verifiedCount;
-    statUnverifiedTotalEl.textContent = formatter.format(unverifiedTotal);
-    statUnverifiedCountEl.textContent = unverifiedCount;
 }
 
 function renderTable() {
@@ -542,8 +512,6 @@ function applyFilters() {
     });
 
     calculateStatistics(filteredData);
-    renderClassReport(filteredData);
-    renderSantriChecker();
     currentPage = 1;
     renderTable();
 }
@@ -881,307 +849,6 @@ async function copyWhatsAppMessage(rowNumber) {
     }
 }
 
-// ================================================================
-// ANALYTICS: Santri & Kelas Data
-// ================================================================
-
-/** Normalize a raw santri object from the API into a consistent shape */
-function normalizeSantriItem(item) {
-    return {
-        nama:  String(item.nama  || item.NamaSantri  || item.Nama  || item.name  || '').trim(),
-        nis:   String(item.nis   || item.NISSantri   || item.NIS   || item.id    || '').trim(),
-        kelas: String(item.kelas || item.KelasSantri || item.Kelas || item.rombel || item.Rombel || '').trim(),
-    };
-}
-
-/**
- * Fetch all santri data from the API with localStorage caching.
- * Mirrors the pattern from data-santri.js provided by the admin.
- */
-async function fetchSantriData() {
-    const statusEl    = document.getElementById('santri-api-status');
-    const loadingEl   = document.getElementById('santri-not-donated-loading');
-    const contentEl   = document.getElementById('santri-not-donated-content');
-    const errorEl     = document.getElementById('santri-not-donated-error');
-    const refreshIcon = document.getElementById('refresh-santri-icon');
-
-    if (statusEl)    statusEl.textContent = 'Memuat data santri...';
-    if (loadingEl)   { loadingEl.classList.remove('hidden'); }
-    if (contentEl)   contentEl.classList.add('hidden');
-    if (errorEl)     errorEl.classList.add('hidden');
-    if (refreshIcon) refreshIcon.classList.add('fa-spin');
-
-    const cachedData = localStorage.getItem(CACHE.KEY);
-    const cachedTime = localStorage.getItem(CACHE.TIME_KEY);
-    const now = new Date().getTime();
-
-    if (cachedData && cachedTime && (now - cachedTime < CACHE.EXPIRY_HOURS * 3600 * 1000)) {
-        try {
-            allSantriData = JSON.parse(cachedData).map(normalizeSantriItem);
-            if (statusEl) statusEl.textContent = `${allSantriData.length} santri terdaftar (cache)`;
-            if (refreshIcon) refreshIcon.classList.remove('fa-spin');
-            renderClassReport(filteredData);
-            renderSantriChecker();
-            return;
-        } catch (e) {
-            console.warn('Cache rusak, mengunduh ulang...');
-        }
-    }
-
-    try {
-        const response = await fetch(GAS_SANTRI_API_URL);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        allSantriData = data.map(normalizeSantriItem);
-
-        try {
-            localStorage.setItem(CACHE.KEY, JSON.stringify(data));
-            localStorage.setItem(CACHE.TIME_KEY, now.toString());
-        } catch (e) {
-            console.warn('Penyimpanan penuh, gagal caching data.');
-        }
-
-        if (statusEl) statusEl.textContent = `${allSantriData.length} santri terdaftar`;
-        renderClassReport(filteredData);
-        renderSantriChecker();
-
-    } catch (error) {
-        console.error('Gagal mengambil data santri:', error);
-
-        if (cachedData) {
-            try {
-                allSantriData = JSON.parse(cachedData).map(normalizeSantriItem);
-                if (statusEl) statusEl.textContent = `${allSantriData.length} santri (data lama)`;
-                renderClassReport(filteredData);
-                renderSantriChecker();
-                return;
-            } catch (e) {
-                localStorage.removeItem(CACHE.KEY);
-                localStorage.removeItem(CACHE.TIME_KEY);
-            }
-        }
-
-        allSantriData = [];
-        if (statusEl) statusEl.textContent = 'Gagal memuat data santri';
-        if (loadingEl) loadingEl.classList.add('hidden');
-        if (errorEl) {
-            errorEl.classList.remove('hidden');
-            const errMsg = document.getElementById('santri-error-msg');
-            if (errMsg) errMsg.textContent = error.message || 'Periksa koneksi internet.';
-        }
-    } finally {
-        if (refreshIcon) refreshIcon.classList.remove('fa-spin');
-    }
-}
-
-/**
- * Fetch class metadata (wali kelas & musyrif) from the API.
- * Mirrors the pattern from data-kelas.js provided by the admin.
- */
-async function fetchClassData() {
-    try {
-        const response = await fetch(GAS_SANTRI_API_URL + '?type=kelas');
-        if (!response.ok) throw new Error('Gagal koneksi ke data kelas');
-        const data = await response.json();
-        classMetaData = {};
-        data.forEach(item => {
-            if (item.kelas) {
-                classMetaData[item.kelas] = {
-                    wali:    item.wali    || '',
-                    musyrif: item.musyrif || '',
-                };
-            }
-        });
-        renderClassReport(filteredData);
-    } catch (error) {
-        console.error('Gagal load data kelas:', error);
-    }
-}
-
-/** Render the class-based report table based on currently filtered donation data */
-function renderClassReport(data) {
-    const tbody = document.getElementById('class-report-tbody');
-    if (!tbody) return;
-
-    // Only santri donations that carry a class
-    const santriDonations = (data || []).filter(row => row.TipeDonatur === 'santri' && row.KelasSantri);
-
-    // Aggregate by class from donations
-    const classMap = {};
-    santriDonations.forEach(row => {
-        const kelas = String(row.KelasSantri).trim();
-        if (!classMap[kelas]) {
-            classMap[kelas] = { totalAmount: 0, verifiedAmount: 0, unverifiedAmount: 0, donatedKeys: new Set() };
-        }
-        const val = parseFloat(row.Nominal) || 0;
-        classMap[kelas].totalAmount += val;
-        const key = String(row.NISSantri || row.NamaSantri || '').trim().toLowerCase();
-        if (key) classMap[kelas].donatedKeys.add(key);
-        if ((row.Status || 'Belum Verifikasi') === 'Terverifikasi') {
-            classMap[kelas].verifiedAmount += val;
-        } else {
-            classMap[kelas].unverifiedAmount += val;
-        }
-    });
-
-    // Build master count per class from loaded santri list
-    const masterCount = {};
-    allSantriData.forEach(s => {
-        if (s.kelas) masterCount[s.kelas] = (masterCount[s.kelas] || 0) + 1;
-    });
-
-    const allClasses = new Set([...Object.keys(classMap), ...Object.keys(masterCount)]);
-
-    if (allClasses.size === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-slate-400"><i class="fas fa-inbox text-2xl mb-2 block opacity-40"></i><span class="block mt-2">Tidak ada data santri dengan informasi kelas</span></td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = '';
-    [...allClasses].sort((a, b) => a.localeCompare(b, 'id')).forEach(kelas => {
-        const stats = classMap[kelas] || { totalAmount: 0, verifiedAmount: 0, unverifiedAmount: 0, donatedKeys: new Set() };
-        const total   = masterCount[kelas] || 0;
-        const donated = stats.donatedKeys.size;
-        const meta    = classMetaData[kelas] || {};
-
-        let participationHTML;
-        if (total > 0) {
-            const pct      = Math.min(100, Math.round((donated / total) * 100));
-            const barColor = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-400' : 'bg-red-400';
-            participationHTML = `
-                <div class="flex items-center gap-2">
-                    <div class="flex-1 bg-slate-100 rounded-full h-2 min-w-[60px]">
-                        <div class="${barColor} h-2 rounded-full" style="width:${pct}%"></div>
-                    </div>
-                    <span class="text-xs font-black text-slate-700 shrink-0">${pct}%</span>
-                </div>
-                <div class="text-xs text-slate-400 mt-0.5">${donated} / ${total} santri</div>`;
-        } else {
-            participationHTML = `<span class="text-sm font-bold text-slate-700">${donated} menghimpun</span>`;
-        }
-
-        const tr = document.createElement('tr');
-        tr.className = 'border-b border-slate-100 hover:bg-slate-50/80 transition-colors';
-        tr.innerHTML = `
-            <td class="px-4 py-3.5">
-                <span class="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1 rounded-lg text-xs font-black">
-                    <i class="fas fa-door-open text-[10px]"></i>${escapeHtml(kelas)}
-                </span>
-                ${meta.wali    ? `<div class="text-xs text-slate-400 mt-1"><i class="fas fa-chalkboard-teacher mr-1 text-indigo-300"></i>${escapeHtml(meta.wali)}</div>`    : ''}
-                ${meta.musyrif ? `<div class="text-xs text-slate-400 mt-0.5"><i class="fas fa-user-tie mr-1 text-indigo-300"></i>${escapeHtml(meta.musyrif)}</div>` : ''}
-            </td>
-            <td class="px-4 py-3.5 min-w-[160px]">${participationHTML}</td>
-            <td class="px-4 py-3.5 font-black text-slate-800">${formatter.format(stats.totalAmount)}</td>
-            <td class="px-4 py-3.5 font-bold text-green-700">${formatter.format(stats.verifiedAmount)}</td>
-            <td class="px-4 py-3.5 font-bold text-yellow-600">${formatter.format(stats.unverifiedAmount)}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-/**
- * Render the "Santri Belum Menghimpun" tab.
- * Uses allDonationData (not filtered) so it shows students who have NEVER donated.
- */
-function renderSantriChecker() {
-    const loadingEl = document.getElementById('santri-not-donated-loading');
-    const contentEl = document.getElementById('santri-not-donated-content');
-    const summaryBar = document.getElementById('santri-summary-bar');
-    const listEl     = document.getElementById('santri-not-donated-list');
-
-    if (!loadingEl || !contentEl) return;
-    if (allSantriData.length === 0) return;
-
-    loadingEl.classList.add('hidden');
-    contentEl.classList.remove('hidden');
-
-    // Build a set of all NIS/names that appear in any donation (unfiltered)
-    const donatedKeys = new Set();
-    allDonationData.forEach(row => {
-        if (row.TipeDonatur === 'santri') {
-            if (row.NISSantri) donatedKeys.add(String(row.NISSantri).trim().toLowerCase());
-            if (row.NamaSantri) donatedKeys.add(String(row.NamaSantri).trim().toLowerCase());
-        }
-    });
-
-    const notDonated = [];
-    const donated    = [];
-    allSantriData.forEach(s => {
-        if (!s.nama) return;
-        const hasDonated = (s.nis && donatedKeys.has(s.nis.toLowerCase())) || donatedKeys.has(s.nama.toLowerCase());
-        (hasDonated ? donated : notDonated).push(s);
-    });
-
-    const total = allSantriData.length;
-    const pct   = total > 0 ? Math.round(donated.length / total * 100) : 0;
-
-    if (summaryBar) {
-        summaryBar.innerHTML = `
-            <div class="bg-green-50 rounded-2xl p-4 text-center border border-green-100">
-                <div class="text-3xl font-black text-green-600">${donated.length}</div>
-                <div class="text-xs font-bold text-green-500 mt-1">Sudah Menghimpun</div>
-            </div>
-            <div class="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
-                <div class="text-3xl font-black text-red-500">${notDonated.length}</div>
-                <div class="text-xs font-bold text-red-400 mt-1">Belum Menghimpun</div>
-            </div>
-            <div class="bg-indigo-50 rounded-2xl p-4 text-center border border-indigo-100">
-                <div class="text-3xl font-black text-indigo-600">${pct}%</div>
-                <div class="text-xs font-bold text-indigo-400 mt-1">Tingkat Keaktifan</div>
-            </div>`;
-    }
-
-    if (!listEl) return;
-
-    if (notDonated.length === 0) {
-        listEl.innerHTML = `
-            <div class="text-center py-8">
-                <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-100">
-                    <i class="fas fa-check-double text-green-500 text-2xl"></i>
-                </div>
-                <h4 class="font-black text-green-600 text-lg">Semua Santri Sudah Menghimpun!</h4>
-                <p class="text-xs text-slate-400 mt-1">Tidak ada santri yang belum berdonasi.</p>
-            </div>`;
-        return;
-    }
-
-    // Group not-donated by class
-    const byKelas = {};
-    notDonated.forEach(s => {
-        const k = s.kelas || 'Tanpa Kelas';
-        if (!byKelas[k]) byKelas[k] = [];
-        byKelas[k].push(s);
-    });
-
-    let html = `<h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">
-        <i class="fas fa-exclamation-circle text-red-400 mr-1.5"></i>Santri Belum Menghimpun per Kelas
-    </h4>`;
-
-    Object.keys(byKelas).sort((a, b) => a.localeCompare(b, 'id')).forEach(kelas => {
-        const students = byKelas[kelas];
-        html += `
-            <div class="mb-4 rounded-2xl overflow-hidden border border-slate-100">
-                <div class="px-4 py-3 bg-slate-50 flex items-center justify-between">
-                    <span class="text-xs font-black text-slate-700">
-                        <i class="fas fa-door-open mr-1.5 text-indigo-400"></i>${escapeHtml(kelas)}
-                    </span>
-                    <span class="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">${students.length} santri</span>
-                </div>
-                <div class="divide-y divide-slate-50">
-                    ${students.map(s => `
-                        <div class="px-4 py-2.5 flex items-center justify-between hover:bg-slate-50/70 transition-colors">
-                            <span class="text-sm font-medium text-slate-700 flex items-center gap-2">
-                                <i class="fas fa-times-circle text-red-300 text-xs"></i>${escapeHtml(s.nama)}
-                            </span>
-                            ${s.nis ? `<span class="text-xs text-slate-400 font-mono bg-slate-50 px-2 py-0.5 rounded">${escapeHtml(s.nis)}</span>` : ''}
-                        </div>`).join('')}
-                </div>
-            </div>`;
-    });
-
-    listEl.innerHTML = html;
-}
-
 // Event Listeners
 refreshButton.addEventListener('click', fetchData);
 filterApplyBtn.addEventListener('click', applyFilters);
@@ -1191,43 +858,6 @@ editForm.addEventListener('submit', handleEditSubmit);
 paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
 paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
 paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
-
-// Analytics Tab Switching
-document.querySelectorAll('.analytics-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.analytics-tab-btn').forEach(b => {
-            b.classList.remove('text-indigo-600', 'bg-indigo-50', 'border-b-2', 'border-indigo-500');
-            b.classList.add('text-slate-400');
-        });
-        btn.classList.add('text-indigo-600', 'bg-indigo-50', 'border-b-2', 'border-indigo-500');
-        btn.classList.remove('text-slate-400');
-        const tab = btn.dataset.tab;
-        document.getElementById('analytics-tab-kelas').classList.toggle('hidden', tab !== 'kelas');
-        document.getElementById('analytics-tab-santri').classList.toggle('hidden', tab !== 'santri');
-    });
-});
-
-// Analytics Panel Toggle (Collapse/Expand)
-document.getElementById('analytics-toggle-btn').addEventListener('click', () => {
-    const body = document.getElementById('analytics-body');
-    const icon = document.getElementById('analytics-toggle-icon');
-    body.classList.toggle('hidden');
-    icon.classList.toggle('rotate-180');
-});
-
-// Refresh Santri Button — clears cache and re-fetches
-document.getElementById('refresh-santri-btn').addEventListener('click', () => {
-    localStorage.removeItem(CACHE.KEY);
-    localStorage.removeItem(CACHE.TIME_KEY);
-    fetchSantriData();
-    fetchClassData();
-});
-
-// Retry Button (shown on error state)
-document.getElementById('retry-santri-btn').addEventListener('click', () => {
-    fetchSantriData();
-    fetchClassData();
-});
 
 // Delegate Click Actions
 tableWrapperEl.addEventListener('click', (e) => {

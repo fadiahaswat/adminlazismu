@@ -29,16 +29,6 @@ export const ALLOWED_ADMIN_EMAILS = [
 // Google Apps Script API URL
 export const GAS_API_URL = "https://script.google.com/macros/s/AKfycbydrhNmtJEk-lHLfrAzI8dG_uOZEKk72edPAEeL9pzVCna6br_hY2dAqDr-t8V5ost4/exec";
 
-// Google Apps Script Santri & Kelas API URL
-export const GAS_SANTRI_API_URL = "https://script.google.com/macros/s/AKfycbw-URYAsLTWCdnGurQhM1ZXa9N8vm-GBlHwtetDlin73-Ma8G0aAbFoboGGUI8GgVDl/exec";
-
-// Santri Data Cache Settings
-export const CACHE = {
-    KEY: 'lazismu_santri_data',
-    TIME_KEY: 'lazismu_santri_cache_time',
-    EXPIRY_HOURS: 24
-};
-
 // UI Constants
 export const BTN_LOGIN_GOOGLE_HTML = '<i class="fab fa-google"></i><span>Masuk dengan Google</span>';
 
