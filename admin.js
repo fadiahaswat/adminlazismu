@@ -890,7 +890,7 @@ function normalizeSantriItem(item) {
     return {
         nama:  (item.nama  || item.NamaSantri  || item.Nama  || item.name  || '').trim(),
         nis:   (item.nis   || item.NISSantri   || item.NIS   || item.id    || '').trim(),
-        kelas: (item.kelas || item.KelasSantri || item.Kelas || item.rombel|| item.Rombel || '').trim(),
+        kelas: (item.kelas || item.KelasSantri || item.Kelas || item.rombel || item.Rombel || '').trim(),
     };
 }
 
@@ -1046,7 +1046,7 @@ function renderClassReport(data) {
 
         let participationHTML;
         if (total > 0) {
-            const pct      = Math.min(100, Math.round(donated / total * 100));
+            const pct      = Math.min(100, Math.round((donated / total) * 100));
             const barColor = pct >= 75 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-400' : 'bg-red-400';
             participationHTML = `
                 <div class="flex items-center gap-2">
