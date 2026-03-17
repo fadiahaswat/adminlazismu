@@ -169,6 +169,25 @@ const statTertinggiEl = document.getElementById('admin-stat-tertinggi');
 const statRataEl = document.getElementById('admin-stat-rata');
 const statTipeEl = document.getElementById('admin-stat-tipe');
 
+// Verification Split Stats Elements
+const statVerifiedTotalEl = document.getElementById('stat-verified-total');
+const statVerifiedCountEl = document.getElementById('stat-verified-count');
+const statPendingTotalEl = document.getElementById('stat-pending-total');
+const statPendingCountEl = document.getElementById('stat-pending-count');
+
+// Class Analytics Elements
+const classAnalyticsToggle = document.getElementById('class-analytics-toggle');
+const classAnalyticsContent = document.getElementById('class-analytics-content');
+const classAnalyticsChevron = document.getElementById('class-analytics-chevron');
+const expectedClassesInput = document.getElementById('expected-classes-input');
+const checkZeroClassesBtn = document.getElementById('check-zero-classes-btn');
+const zeroClassesContainer = document.getElementById('zero-classes-container');
+const zeroClassesList = document.getElementById('zero-classes-list');
+const classSizesInput = document.getElementById('class-sizes-input');
+const classStatsTbody = document.getElementById('class-stats-tbody');
+const classStatsCount = document.getElementById('class-stats-count');
+const classStatsEmpty = document.getElementById('class-stats-empty');
+
 // Modal Elements
 const alertModal = document.getElementById('alert-modal');
 const confirmModal = document.getElementById('confirm-modal');
@@ -327,6 +346,10 @@ function calculateStatistics(data) {
     let count = data.length;
     let maxVal = 0;
     let todayTotal = 0;
+    let verifiedTotal = 0;
+    let verifiedCount = 0;
+    let pendingTotal = 0;
+    let pendingCount = 0;
     const todayStr = new Date().toDateString();
     
     const typeCounts = {};
@@ -342,6 +365,15 @@ function calculateStatistics(data) {
 
         const type = row.JenisDonasi || 'Lainnya';
         typeCounts[type] = (typeCounts[type] || 0) + 1;
+
+        const status = row.Status || 'Belum Verifikasi';
+        if (status === 'Terverifikasi') {
+            verifiedTotal += val;
+            verifiedCount++;
+        } else {
+            pendingTotal += val;
+            pendingCount++;
+        }
     });
 
     let topType = '-';
@@ -361,6 +393,173 @@ function calculateStatistics(data) {
     statTertinggiEl.textContent = formatter.format(maxVal);
     statRataEl.textContent = formatter.format(avgVal);
     statTipeEl.textContent = topType;
+
+    // Update verification split stats
+    statVerifiedTotalEl.textContent = formatter.format(verifiedTotal);
+    statVerifiedCountEl.textContent = `${verifiedCount} transaksi`;
+    statPendingTotalEl.textContent = formatter.format(pendingTotal);
+    statPendingCountEl.textContent = `${pendingCount} transaksi`;
+
+    // Render class analytics
+    renderClassStats(data);
+}
+
+// === CLASS ANALYTICS FUNCTIONS ===
+
+function parseClassSizes() {
+    const raw = classSizesInput.value.trim();
+    const sizes = {};
+    if (!raw) return sizes;
+    raw.split(',').forEach(part => {
+        const [name, count] = part.split(':').map(s => s.trim());
+        if (name && count && !isNaN(parseInt(count))) {
+            sizes[name.toUpperCase()] = parseInt(count);
+        }
+    });
+    return sizes;
+}
+
+function renderClassStats(data) {
+    const santriData = data.filter(r => r.TipeDonatur === 'santri' && r.KelasSantri && r.KelasSantri.trim());
+    const classSizes = parseClassSizes();
+
+    const classMap = {};
+    santriData.forEach(row => {
+        const kelas = row.KelasSantri.trim().toUpperCase();
+        if (!classMap[kelas]) {
+            classMap[kelas] = { nama: row.KelasSantri.trim(), donors: new Set(), totalAll: 0, totalVerified: 0 };
+        }
+        // Use NamaSantri+NISSantri combo as unique donor key, fall back to row id
+        const donorKey = (row.NamaSantri || '') + '|' + (row.NISSantri || row.row);
+        classMap[kelas].donors.add(donorKey);
+        const val = parseFloat(row.Nominal) || 0;
+        classMap[kelas].totalAll += val;
+        if ((row.Status || 'Belum Verifikasi') === 'Terverifikasi') {
+            classMap[kelas].totalVerified += val;
+        }
+    });
+
+    const classes = Object.values(classMap).sort((a, b) => b.totalAll - a.totalAll);
+    const maxDonors = classes.length > 0 ? Math.max(...classes.map(c => c.donors.size)) : 1;
+
+    classStatsCount.textContent = `${classes.length} kelas`;
+
+    if (classes.length === 0) {
+        classStatsTbody.innerHTML = '';
+        classStatsEmpty.classList.remove('hidden');
+        return;
+    }
+    classStatsEmpty.classList.add('hidden');
+
+    let grandTotalAll = 0;
+    let grandTotalVerified = 0;
+    let grandDonors = 0;
+
+    const rows = classes.map(c => {
+        const donorCount = c.donors.size;
+        const klasKey = c.nama.toUpperCase();
+        const totalStudents = classSizes[klasKey] || 0;
+        const classHasSizeConfig = classSizes[klasKey] !== undefined;
+        let pct, pctLabel, pctBarColor;
+
+        if (totalStudents > 0) {
+            pct = Math.min(Math.round((donorCount / totalStudents) * 100), 100);
+            pctLabel = `${pct}%`;
+        } else {
+            pct = maxDonors > 0 ? Math.round((donorCount / maxDonors) * 100) : 0;
+            pctLabel = classHasSizeConfig ? `${pct}%` : `${pct}%*`;
+        }
+
+        pctBarColor = pct >= 75 ? 'bg-green-500' : pct >= 50 ? 'bg-blue-500' : pct >= 25 ? 'bg-yellow-500' : 'bg-red-400';
+
+        grandTotalAll += c.totalAll;
+        grandTotalVerified += c.totalVerified;
+        grandDonors += donorCount;
+
+        return `
+            <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-3">
+                    <span class="font-black text-slate-800">${escapeHtml(c.nama)}</span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-orange-50 text-orange-600 border border-orange-100">
+                        <i class="fas fa-user text-[9px]"></i> ${donorCount}${totalStudents > 0 ? ` / ${totalStudents}` : ''}
+                    </span>
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex items-center gap-2 justify-center">
+                        <div class="w-20 h-2 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                            <div class="h-full ${pctBarColor} rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-500 w-8 text-right">${pctLabel}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <span class="font-bold text-green-700 text-sm">${formatter.format(c.totalVerified)}</span>
+                </td>
+                <td class="px-4 py-3 text-right">
+                    <span class="font-black text-slate-800 text-sm">${formatter.format(c.totalAll)}</span>
+                </td>
+            </tr>
+        `;
+    });
+
+    // Grand total row
+    rows.push(`
+        <tr class="bg-slate-50 border-t-2 border-slate-200">
+            <td class="px-4 py-3">
+                <span class="font-black text-slate-700 text-[11px] uppercase tracking-wider">Total Semua Kelas</span>
+            </td>
+            <td class="px-4 py-3 text-center">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                    <i class="fas fa-users text-[9px]"></i> ${grandDonors}
+                </span>
+            </td>
+            <td class="px-4 py-3"></td>
+            <td class="px-4 py-3 text-right">
+                <span class="font-black text-green-700 text-sm">${formatter.format(grandTotalVerified)}</span>
+            </td>
+            <td class="px-4 py-3 text-right">
+                <span class="font-black text-slate-800 text-sm">${formatter.format(grandTotalAll)}</span>
+            </td>
+        </tr>
+    `);
+
+    classStatsTbody.innerHTML = rows.join('');
+
+    // Footnote for relative percentage
+    const hasSizes = Object.keys(classSizes).length > 0;
+    const footnoteEl = document.getElementById('class-stats-footnote');
+    if (footnoteEl) {
+        footnoteEl.textContent = hasSizes ? '' : '* Persentase relatif (kelas paling aktif = 100%). Isi "Jumlah Santri Per Kelas" untuk persentase nyata.';
+    }
+}
+
+function checkZeroClasses() {
+    const input = expectedClassesInput.value.trim();
+    if (!input) {
+        zeroClassesContainer.classList.add('hidden');
+        return;
+    }
+    const expectedClasses = input.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+    const santriData = filteredData.filter(r => r.TipeDonatur === 'santri' && r.KelasSantri);
+    const donatedClasses = new Set(santriData.map(r => (r.KelasSantri || '').trim().toUpperCase()));
+
+    const zeroClasses = expectedClasses.filter(c => !donatedClasses.has(c));
+    const activeClasses = expectedClasses.filter(c => donatedClasses.has(c));
+
+    if (zeroClasses.length === 0) {
+        zeroClassesList.innerHTML = `<span class="text-[11px] font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 inline-flex items-center gap-1"><i class="fas fa-check-circle"></i> Semua kelas (${activeClasses.length}) sudah ada penghimpunan!</span>`;
+    } else {
+        const zeroBadges = zeroClasses.map(c =>
+            `<span class="text-[11px] font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200 inline-flex items-center gap-1"><i class="fas fa-times-circle"></i> ${escapeHtml(c)}</span>`
+        ).join('');
+        const summary = activeClasses.length > 0
+            ? `<span class="text-[11px] text-slate-400 font-medium mt-1 block w-full">${activeClasses.length} kelas sudah aktif, ${zeroClasses.length} kelas belum ada donasi.</span>`
+            : '';
+        zeroClassesList.innerHTML = zeroBadges + summary;
+    }
+    zeroClassesContainer.classList.remove('hidden');
 }
 
 function renderTable() {
@@ -858,6 +1057,34 @@ editForm.addEventListener('submit', handleEditSubmit);
 paginationRowsEl.addEventListener('change', () => { currentPage = 1; renderTable(); });
 paginationPrevBtn.addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTable(); }});
 paginationNextBtn.addEventListener('click', () => { const max = Math.ceil(filteredData.length/rowsPerPage); if(currentPage < max) { currentPage++; renderTable(); }});
+
+// Class Analytics toggle
+classAnalyticsToggle.addEventListener('click', () => {
+    classAnalyticsContent.classList.toggle('hidden');
+    classAnalyticsChevron.classList.toggle('rotate-180');
+});
+
+// Check zero classes button
+checkZeroClassesBtn.addEventListener('click', checkZeroClasses);
+
+// Save class sizes to localStorage and re-render on change
+classSizesInput.addEventListener('change', () => {
+    localStorage.setItem('lazismu_class_sizes', classSizesInput.value);
+    renderClassStats(filteredData);
+});
+
+// Load saved class sizes from localStorage
+(function loadSavedClassSizes() {
+    const saved = localStorage.getItem('lazismu_class_sizes');
+    if (saved) classSizesInput.value = saved;
+    const savedExpected = localStorage.getItem('lazismu_expected_classes');
+    if (savedExpected) expectedClassesInput.value = savedExpected;
+})();
+
+// Save expected classes on change
+expectedClassesInput.addEventListener('change', () => {
+    localStorage.setItem('lazismu_expected_classes', expectedClassesInput.value);
+});
 
 // Delegate Click Actions
 tableWrapperEl.addEventListener('click', (e) => {
